@@ -13,6 +13,11 @@ configure do
     set :show_exceptions, false
 end
 
+user = ""
+use Rack::Auth::Basic, "ServerTag" do |username, password|
+    user = username
+    [username, password] == ['dan', 'crap']
+end
 
 class ServerTag
     class Schema
@@ -21,7 +26,7 @@ class ServerTag
             tables = db.execute("SELECT name FROM sqlite_master WHERE type = 'table';")
             schema_tables = %w{host_tag history}
             schema_tables.each do |tbl|
-                unless tables.include?(tbl)
+                unless tables.include?([tbl])
                     raise ServerTag::HTTPInternalServerError,
                         "Missing table '#{tbl}'. To initialize DB, POST to /initdb. THAT WILL NUKE ALL DATA IN THE DB!!"
                 end
@@ -40,12 +45,12 @@ class ServerTag
             db.execute("CREATE TABLE host_tag (host STRING, tag STRING);")
 
             # Contains a row for every tag changed on every host ever. E.g.:
-            #     | datetime            | user    | host    | tag     | action  |
-            #     |---------------------|---------|---------|---------|---------|
-            #     | 2012-02-01 11:32:55 | dan     | queue7  | up      | remove  |
+            #     | datetime            | user    | remote_host | host    | tag     | action  |
+            #     |---------------------|---------|-------------|---------|---------|---------|
+            #     | 2012-02-01 11:32:55 | dan     | 10.0.64.16  | queue7  | up      | remove  |
             # 'action' is either 'add' or 'remove'.
             db.execute("DROP TABLE IF EXISTS history;")
-            db.execute("CREATE TABLE history (datetime STRING, user STRING,
+            db.execute("CREATE TABLE history (datetime STRING, user STRING, remote_host STRING,
                         host STRING, tag STRING, action STRING);")
         end
     end
@@ -114,6 +119,35 @@ class ServerTag
         end
     end
 
+
+    class HistoryEvent < Model
+        attr_accessor :datetime, :user, :remote_host, :host, :tag, :action
+
+        def initialize(user, remote_host, host, tag, action, datetime="now");
+            @user = user
+            @remote_host = remote_host
+            @host = host
+            @tag = tag
+            @action = action
+            @datetime = datetime
+        end
+
+        # Saves the given HistoryEvent to the DB.
+        def save(db)
+            db.execute("INSERT INTO history (datetime, user, remote_host, host, tag, action)
+                            VALUES (datetime(:datetime), :user, :remote_host,
+                                    :host, :tag, :action);",
+                       "datetime" => @datetime,
+                       "user" => @user,
+                       "remote_host" => @remote_host,
+                       "host" => @host,
+                       "tag" => @tag,
+                       "action" => @action
+                      )
+        end
+    end
+
+
     class HTTPErrorModel < Model
         attr_accessor :status, :name, :message
 
@@ -177,9 +211,15 @@ post '/host/:hostname' do |hostname|
         db.execute("INSERT INTO host_tag (host, tag) VALUES (:hostname, :tag)",
                    "hostname" => hostname,
                    "tag" => tag)
+
+        he = ServerTag::HistoryEvent.new(request.env["REMOTE_USER"],
+                                         request.env["REMOTE_ADDR"],
+                                         hostname, tag, "add")
+        he.save(db)
     end
 
-    204
+    status 204
+    body ""
 end
 
 
