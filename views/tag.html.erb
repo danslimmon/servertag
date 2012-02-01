@@ -1,0 +1,17 @@
+<% tag = locals[:tag] %>
+<h1><%= tag.name %></h1>
+
+<%
+hosts = tag.hosts.sort
+if hosts.empty?
+%>
+    <div>No hosts.</div>
+<%
+else
+    tag.hosts.sort.each do |host|
+%>
+    <div><%= host %></div><br />
+<%
+    end
+end
+%>

@@ -1,0 +1,6 @@
+<%
+error = locals[:error]
+return_obj = {"status" => error.status,
+              "name" => error.name,
+              "message" => error.message}
+%><%= JSON.dump(return_obj) %>
