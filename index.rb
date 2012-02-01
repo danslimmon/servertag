@@ -29,7 +29,7 @@ class ServerTag
         end
 
         # Initializes the tables in the given DB, nuking all data.
-        def initalize_tables(db)
+        def init_tables(db)
             # Contains a row for every tag/host pair that currently exists. E.g.:
             #     | host     | tag     |
             #     |----------|---------|
@@ -51,11 +51,13 @@ class ServerTag
     end
 
     class DatabaseConnectionFactory
-        def self.get
+        def self.get(validate=true)
             db = SQLite3::Database.new(DB_PATH)
 
-            s = Schema.new
-            s.assert_tables_present(db)
+            if validate
+                s = Schema.new
+                s.assert_tables_present(db)
+            end
 
             db
         end
@@ -136,12 +138,13 @@ end
 # Routes
 #
 # Error routes
-error ServerTag::HTTPInternalServerError do
+error ServerTag::HTTPError do
     error_model = env["sinatra.error"].model
 
     status error_model.status
     erb error_model.template(request.accept), :locals => {:error => error_model}
 end
+
 
 # Accessing by host
 get '/host/:hostname' do |hostname|
@@ -157,6 +160,7 @@ get '/host/:hostname' do |hostname|
 
     erb h.template(request.accept), :locals => {:host => h}
 end
+
 
 post '/host/:hostname' do |hostname|
     begin
@@ -196,6 +200,10 @@ end
 
 # DB initialization
 post '/initdb' do
-    db = ServerTag::DatabaseConnectionFactory.get
-    db.init_tables
+    db = ServerTag::DatabaseConnectionFactory.get(validate=false)
+    s = ServerTag::Schema.new
+    s.init_tables(db)
+
+    status 204
+    body ""
 end
