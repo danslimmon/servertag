@@ -19,6 +19,10 @@ use Rack::Auth::Basic, "ServerTag" do |username, password|
     [username, password] == ['dan', 'crap']
 end
 
+helpers do
+    include Rack::Utils
+end
+
 class ServerTag
     class Schema
         # Makes sure the DB has the right tables, raising a 500 if not.
@@ -42,7 +46,8 @@ class ServerTag
             #     | web14    | prod    |
             #     | build1   | dev     |
             db.execute("DROP TABLE IF EXISTS host_tag;")
-            db.execute("CREATE TABLE host_tag (host STRING, tag STRING);")
+            db.execute("CREATE TABLE host_tag (host STRING, tag STRING,
+                                               PRIMARY KEY(host, tag));")
 
             # Contains a row for every tag changed on every host ever. E.g.:
             #     | datetime            | user    | remote_host | host    | tag     | action  |
@@ -68,58 +73,100 @@ class ServerTag
         end
     end
 
-    class Model
-        # Returns the name of the template for a host, given the list of accepted types.
-        def template(accepted_types)
-            # The following converts, e.g., 'ServerTag::Host' to 'host'.
-            class_name = self.class.to_s.split("::")[-1].downcase
-            accepted_types.each do |type|
+    class WhereClause
+        def initialize(criteria)
+            @criteria = criteria
+        end
+
+        def render
+            conditions = @criteria.keys.map do |db_column|
+                "#{db_column.to_s} = :#{db_column.to_s}"
+            end
+            return "" if conditions.empty?
+
+            "WHERE " + conditions.join(" AND ")
+        end
+    end
+
+
+    class View
+        def initialize(base_name, accept)
+            @base_name = base_name
+            @accept = accept
+        end
+        
+        def template_name
+            "#{@base_name}.#{_data_type}".to_sym
+        end
+
+        def _data_type
+            @accept.each do |type|
                 if %q{text/x-json application/json}.include?(type)
-                    return "#{class_name}.json".to_sym
+                    return "json"
                 end
             end
             # Default is HTML
-            return "#{class_name}.html".to_sym
+            return "html"
         end
     end
 
 
-    class Host < Model
-        attr_accessor :name
-        attr_accessor :tags
+    class Model
+    end
 
-        def initialize(hostname); @name = hostname; @tags = []; end
 
-        # Adds the given tags to the host instance.
-        def add_tags!(new_tags); @tags += new_tags; end
+    class HostTag < Model
+        attr_accessor :host
+        attr_accessor :tag
 
-        # Removes the given tags from the host
-        def remove_tags!(tags_to_remove)
-            @tags.reject! do |tag|
-                tags_to_remove.include?(tag)
+        def initialize(host, tag)
+            @host = host
+            @tag = tag
+            @_exists = true
+        end
+
+        # Factory method for HostTag instances pulled from the DB
+        def self.find_all(db, criteria)
+            query = "SELECT host, tag FROM host_tag";
+
+            criteria.each_key do |db_column|
+                # Fail if there are any criteria we can't use
+                unless [:host, :tag].include?(db_column)
+                    raise "Invalid column name '#{html_escape(db_column)}'"
+                end
+            end
+            wc = ServerTag::WhereClause.new(criteria)
+            query += " " + wc.render
+            query += ";"
+
+            host_tags = []
+            db.execute(query, criteria).each do |row|
+                host_tags << HostTag.new(row[0], row[1])
+            end
+            host_tags
+        end
+
+        # Deletes the host/tag pair
+        def delete!
+            @_exists = false
+        end
+
+        # Writes the HostTag to the DB
+        def save(db)
+            if @_exists
+                db.execute("INSERT OR IGNORE INTO host_tag (host, tag) VALUES (:host, :tag);",
+                           :host => @host, :tag => @tag)
+            else
+                db.execute("DELETE FROM host_tag WHERE host = :host AND tag = :tag;",
+                           :host => @host, :tag => @tag)
             end
         end
     end
 
 
-    class Tag < Model
-        attr_accessor :name
-        attr_accessor :hosts
-
-        def initialize(tagname); @name = tagname; @hosts = []; end
-
-        # Adds the given hosts to the tag instance.
-        def add_hosts!(new_hosts); @hosts += new_hosts; end
-
-        # Removes the given hosts from the tag
-        def remove_hosts!(hosts_to_remove)
-            @hosts.reject! do |host|
-                hosts_to_remove.include?(host)
-            end
-        end
-    end
-
-
+    # Represents an action performed by a user.
+    #
+    # 'action' is either 'add' or 'remove'
     class HistoryEvent < Model
         attr_accessor :datetime, :user, :remote_host, :host, :tag, :action
 
@@ -183,16 +230,10 @@ end
 # Accessing by host
 get '/host/:hostname' do |hostname|
     db = ServerTag::DatabaseConnectionFactory.get
+    host_tags = ServerTag::HostTag.find_all(db, :host => hostname)
 
-    rows = db.execute("SELECT DISTINCT tag FROM host_tag WHERE host = :hostname",
-                      "hostname" => hostname)
-    tags = rows.map do |row|
-        row[0]
-    end
-    h = ServerTag::Host.new(hostname)
-    h.add_tags!(tags)
-
-    erb h.template(request.accept), :locals => {:host => h}
+    v = ServerTag::View.new("host", request.accept)
+    erb v.template_name, :locals => {:hostname => hostname, :host_tags => host_tags}
 end
 
 
@@ -208,9 +249,8 @@ post '/host/:hostname' do |hostname|
 
     db = ServerTag::DatabaseConnectionFactory.get
     post_obj["tags"].each do |tag|
-        db.execute("INSERT INTO host_tag (host, tag) VALUES (:hostname, :tag)",
-                   "hostname" => hostname,
-                   "tag" => tag)
+        ht = ServerTag::HostTag.new(hostname, tag)
+        ht.save(db)
 
         he = ServerTag::HistoryEvent.new(request.env["REMOTE_USER"],
                                          request.env["REMOTE_ADDR"],
@@ -223,18 +263,41 @@ post '/host/:hostname' do |hostname|
 end
 
 
-# By tag
+delete '/host/:hostname/:tagname' do |hostname,tagname|
+    db = ServerTag::DatabaseConnectionFactory.get
+    db.execute("DELETE FROM host_tag WHERE host = :hostname AND tag = :tagname;",
+               "hostname" => hostname,
+               "tagname" => tagname)
+    puts "Obviously didn't get here."
+
+    he = ServerTag::HistoryEvent.new(request.env["REMOTE_USER"],
+                                     request.env["REMOTE_ADDR"],
+                                     hostname, tagname, "remove")
+    he.save(db)
+
+    status 204
+    body ""
+end
+
+
+# Accessing by tag
 get '/tag/:tagname' do |tagname|
     db = ServerTag::DatabaseConnectionFactory.get
-    rows = db.execute("SELECT DISTINCT host FROM host_tag WHERE tag = :tagname",
-                      "tagname" => tagname)
-    hosts = rows.map do |row|
-        row[0]
-    end
-    t = ServerTag::Tag.new(tagname)
-    t.add_hosts!(hosts)
+    host_tags = ServerTag::HostTag.find_all(db, :tag => tagname)
 
-    erb t.template(request.accept), :locals => {:tag => t}
+    v = ServerTag::View.new("tag", request.accept)
+    erb v.template_name, :locals => {:tagname => tagname, :host_tags => host_tags}
+end
+
+
+# History
+get '/history' do
+    db = ServerTag::DatabaseConnectionFactory.get
+    rows = db.execute("SELECT datetime, user, remote_host, host, tag, action
+                       FROM history
+                       LIMIT :limit",
+                      lim)
+    he = ServerTag::History.new
 end
 
 

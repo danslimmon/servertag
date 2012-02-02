@@ -1,14 +1,14 @@
-<% tag = locals[:tag] %>
-<h1><%= tag.name %></h1>
+<% host_tags = locals[:host_tags] %>
+<h1><%= locals[:tagname] %></h1>
 
 <%
-hosts = tag.hosts.sort
-if hosts.empty?
+if host_tags.empty?
 %>
-    <div>No hosts.</div>
+    <div>No hosts have this tag.</div>
 <%
 else
-    tag.hosts.sort.each do |host|
+    hosts = host_tags.map {|ht|; ht.host}
+    hosts.sort.each do |host|
 %>
     <div><%= host %></div><br />
 <%
