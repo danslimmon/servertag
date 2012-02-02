@@ -147,7 +147,7 @@ class ServerTag
         end
 
         # Deletes the host/tag pair
-        def delete!
+        def remove!
             @_exists = false
         end
 
@@ -265,10 +265,9 @@ end
 
 delete '/host/:hostname/:tagname' do |hostname,tagname|
     db = ServerTag::DatabaseConnectionFactory.get
-    db.execute("DELETE FROM host_tag WHERE host = :hostname AND tag = :tagname;",
-               "hostname" => hostname,
-               "tagname" => tagname)
-    puts "Obviously didn't get here."
+    ht = ServerTag::HostTag.new(hostname, tagname)
+    ht.remove!
+    ht.save(db)
 
     he = ServerTag::HistoryEvent.new(request.env["REMOTE_USER"],
                                      request.env["REMOTE_ADDR"],
