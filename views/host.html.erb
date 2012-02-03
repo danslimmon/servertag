@@ -1,17 +1,23 @@
+<%= erb "header.html".to_sym %>
+
 <% host_tags = locals[:host_tags] %>
-<h1><%= locals[:hostname] %></h1>
+    <body>
+        <h1><%= locals[:hostname] %></h1>
 
 <%
 if host_tags.empty?
 %>
-    <div>No tags.</div>
+        <div>No tags.</div>
 <%
 else
     tags = host_tags.map {|ht|; ht.tag}
     tags.sort.each do |tag|
 %>
-    <div><%= tag %></div><br />
+        <div><%= tag %></div><br />
 <%
     end
 end
 %>
+    </body>
+
+<%= erb "footer.html".to_sym %>

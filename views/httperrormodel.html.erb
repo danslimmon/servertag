@@ -1,4 +1,5 @@
-<html>
+<%= erb "header.html".to_sym %>
+
      <body>
 <%
 error = locals[:error]
@@ -6,3 +7,5 @@ error = locals[:error]
         <div><%= error.message %></div>
     </body>
 </html>
+
+<%= erb "footer.html".to_sym %>
