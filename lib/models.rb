@@ -32,7 +32,7 @@ module ServerTag
         end
 
         def _assert_savable
-            if @name.empty? or not @tags.is_a(Array)
+            if @name.empty? or not @tags.is_a?(Array)
                 raise HTTPInternalServerError.new(
                     "Tried to save invalid host to DB:\n\n#{self.inspect}")
             end
@@ -46,12 +46,12 @@ module ServerTag
         end
 
         def _populate_client!
-            @_client = Host._new_client() unless @_client.nil?
+            @_client = Host._new_client() if @_client.nil?
         end
 
         def save
-            _assert_savable()
-            _populate_client!()
+            _assert_savable
+            _populate_client!
 
             @_client.index({:name => @name, :tags => @tags})
         end

@@ -105,7 +105,8 @@ error ServerTag::HTTPError do
     error_model = env["sinatra.error"].model
 
     status error_model.status
-    erb error_model.template(request.accept), :locals => {:error => error_model}
+    v = ServerTag::View.new("httperror", request.accept)
+    erb v.template_name, :locals => {:error => error_model}
 end
 
 
@@ -128,16 +129,9 @@ post '/host/:hostname' do |hostname|
                 "Malformed input: expected JSON hash with a 'tags' array."
     end
 
-    db = ServerTag::DatabaseConnectionFactory.get
-    post_obj["tags"].each do |tag|
-        ht = ServerTag::HostTag.new(hostname, tag)
-        ht.save(db)
-
-        he = ServerTag::HistoryEvent.new(request.env["REMOTE_USER"],
-                                         request.env["REMOTE_ADDR"],
-                                         hostname, tag, "add")
-        he.save(db)
-    end
+    h = ServerTag::Host.find_by_name(hostname)
+    h.tags = [h.tags, post_obj["tags"]].flatten.uniq
+    h.save
 
     status 204
     body ""
@@ -178,17 +172,6 @@ get '/history' do
                        LIMIT :limit",
                       lim)
     he = ServerTag::History.new
-end
-
-
-# DB initialization
-post '/initdb' do
-    db = ServerTag::DatabaseConnectionFactory.get(validate=false)
-    s = ServerTag::Schema.new
-    s.init_tables(db)
-
-    status 204
-    body ""
 end
 
 
