@@ -1,14 +1,10 @@
 require 'rubygems'
 require 'json'
-require 'sqlite3'
 
 require 'sinatra'
 
 require 'lib/models'
 
-#@DEBUG
-#DB_PATH = "/home/dan/servertag/db.sqlite"
-DB_PATH = "/tmp/db.sqlite"
 
 configure do
     set :show_exceptions, false
@@ -24,72 +20,7 @@ helpers do
     include Rack::Utils
 end
 
-class ServerTag
-    class Schema
-        # Makes sure the DB has the right tables, raising a 500 if not.
-        def assert_tables_present(db)
-            tables = db.execute("SELECT name FROM sqlite_master WHERE type = 'table';")
-            schema_tables = %w{host_tag history}
-            schema_tables.each do |tbl|
-                unless tables.include?([tbl])
-                    raise ServerTag::HTTPInternalServerError,
-                        "Missing table '#{tbl}'. To initialize DB, POST to /initdb. THAT WILL NUKE ALL DATA IN THE DB!!"
-                end
-            end
-        end
-
-        # Initializes the tables in the given DB, nuking all data.
-        def init_tables(db)
-            # Contains a row for every tag/host pair that currently exists. E.g.:
-            #     | host     | tag     |
-            #     |----------|---------|
-            #     | web14    | web     |
-            #     | web14    | prod    |
-            #     | build1   | dev     |
-            db.execute("DROP TABLE IF EXISTS host_tag;")
-            db.execute("CREATE TABLE host_tag (host STRING, tag STRING,
-                                               PRIMARY KEY(host, tag));")
-
-            # Contains a row for every tag changed on every host ever. E.g.:
-            #     | datetime            | user    | remote_host | host    | tag     | action  |
-            #     |---------------------|---------|-------------|---------|---------|---------|
-            #     | 2012-02-01 11:32:55 | dan     | 10.0.64.16  | queue7  | up      | remove  |
-            # 'action' is either 'add' or 'remove'.
-            db.execute("DROP TABLE IF EXISTS history;")
-            db.execute("CREATE TABLE history (datetime STRING, user STRING, remote_host STRING,
-                        host STRING, tag STRING, action STRING);")
-        end
-    end
-
-    class DatabaseConnectionFactory
-        def self.get(validate=true)
-            db = SQLite3::Database.new(DB_PATH)
-
-            if validate
-                s = Schema.new
-                s.assert_tables_present(db)
-            end
-
-            db
-        end
-    end
-
-    class WhereClause
-        def initialize(criteria)
-            @criteria = criteria
-        end
-
-        def render
-            conditions = @criteria.keys.map do |db_column|
-                "#{db_column.to_s} = :#{db_column.to_s}"
-            end
-            return "" if conditions.empty?
-
-            "WHERE " + conditions.join(" AND ")
-        end
-    end
-
-
+module ServerTag
     class View
         def initialize(base_name, accept)
             @base_name = base_name
@@ -112,63 +43,10 @@ class ServerTag
     end
 
 
-    class Model
-    end
-
-
-    class HostTag < Model
-        attr_accessor :host
-        attr_accessor :tag
-
-        def initialize(host, tag)
-            @host = host
-            @tag = tag
-            @_exists = true
-        end
-
-        # Factory method for HostTag instances pulled from the DB
-        def self.find_all(db, criteria)
-            query = "SELECT host, tag FROM host_tag";
-
-            criteria.each_key do |db_column|
-                # Fail if there are any criteria we can't use
-                unless [:host, :tag].include?(db_column)
-                    raise "Invalid column name '#{html_escape(db_column)}'"
-                end
-            end
-            wc = ServerTag::WhereClause.new(criteria)
-            query += " " + wc.render
-            query += ";"
-
-            host_tags = []
-            db.execute(query, criteria).each do |row|
-                host_tags << HostTag.new(row[0], row[1])
-            end
-            host_tags
-        end
-
-        # Deletes the host/tag pair
-        def remove!
-            @_exists = false
-        end
-
-        # Writes the HostTag to the DB
-        def save(db)
-            if @_exists
-                db.execute("INSERT OR IGNORE INTO host_tag (host, tag) VALUES (:host, :tag);",
-                           :host => @host, :tag => @tag)
-            else
-                db.execute("DELETE FROM host_tag WHERE host = :host AND tag = :tag;",
-                           :host => @host, :tag => @tag)
-            end
-        end
-    end
-
-
     # Represents an action performed by a user.
     #
     # 'action' is either 'add' or 'remove'
-    class HistoryEvent < Model
+    class HistoryEvent
         attr_accessor :datetime, :user, :remote_host, :host, :tag, :action
 
         def initialize(user, remote_host, host, tag, action, datetime="now");
@@ -196,7 +74,7 @@ class ServerTag
     end
 
 
-    class HTTPErrorModel < Model
+    class HTTPErrorModel
         attr_accessor :status, :name, :message
 
         def initialize(status, name, message)
@@ -210,6 +88,9 @@ class ServerTag
 
     class HTTPBadRequestError < HTTPError
         def model; HTTPErrorModel.new(400, "Bad Request", self.message); end
+    end
+    class HTTPNotFoundError < HTTPError
+        def model; HTTPErrorModel.new(404, "Not Found", self.message); end
     end
     class HTTPInternalServerError < HTTPError
         def model; HTTPErrorModel.new(500, "Internal Server Error", self.message); end
@@ -230,11 +111,10 @@ end
 
 # Accessing by host
 get '/host/:hostname' do |hostname|
-    db = ServerTag::DatabaseConnectionFactory.get
-    host_tags = ServerTag::HostTag.find_all(db, :host => hostname)
+    host = ServerTag::Host.find_by_name(hostname)
 
     v = ServerTag::View.new("host", request.accept)
-    erb v.template_name, :locals => {:hostname => hostname, :host_tags => host_tags}
+    erb v.template_name, :locals => {:hostname => host.name, :tags => host.tags}
 end
 
 

@@ -1,8 +1,7 @@
 <%
 hostname = locals[:hostname]
-host_tags = locals[:host_tags]
+tags = locals[:tags]
 
-tags = host_tags.map {|ht|; ht.tag}
 return_obj = {"name" => hostname,
               "tags" => tags}
 %>
