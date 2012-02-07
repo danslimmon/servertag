@@ -129,7 +129,13 @@ post '/host/:hostname' do |hostname|
                 "Malformed input: expected JSON hash with a 'tags' array."
     end
 
-    h = ServerTag::Host.find_by_name(hostname)
+    begin
+        h = ServerTag::Host.find_by_name(hostname)
+    rescue ServerTag::HTTPNotFoundError,
+        h = ServerTag::Host.new
+        h.name = hostname
+        h.tags = []
+    end
     h.tags = [h.tags, post_obj["tags"]].flatten.uniq
     h.save
 
@@ -139,15 +145,9 @@ end
 
 
 delete '/host/:hostname/:tagname' do |hostname,tagname|
-    db = ServerTag::DatabaseConnectionFactory.get
-    ht = ServerTag::HostTag.new(hostname, tagname)
-    ht.remove!
-    ht.save(db)
-
-    he = ServerTag::HistoryEvent.new(request.env["REMOTE_USER"],
-                                     request.env["REMOTE_ADDR"],
-                                     hostname, tagname, "remove")
-    he.save(db)
+    h = ServerTag::Host.find_by_name(hostname)
+    h.tags.reject! {|tag|; tag == tagname}
+    h.save
 
     status 204
     body ""

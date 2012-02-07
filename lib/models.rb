@@ -3,7 +3,7 @@ require 'rubberband'
 
 module ServerTag
     class Host
-        attr_accessor :name, :tags
+        attr_accessor :name, :tags, :es_id
 
         def initialize
             @_client = nil
@@ -22,7 +22,7 @@ module ServerTag
         # Converts an elasticsearch hit instance to a Host instance.
         def self._hit_to_host(es_hit)
             h = Host.new
-            h.name, h.tags = es_hit.name, es_hit.tags
+            h.name, h.tags, h.es_id = es_hit.name, es_hit.tags, es_hit._id
 
             h
         end
@@ -53,7 +53,7 @@ module ServerTag
             _assert_savable
             _populate_client!
 
-            @_client.index({:name => @name, :tags => @tags})
+            @_client.index({:name => @name, :tags => @tags}, :id => @es_id)
         end
     end
 end
