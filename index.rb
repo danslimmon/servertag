@@ -1,9 +1,10 @@
 require 'rubygems'
-
 require 'json'
 require 'sqlite3'
 
 require 'sinatra'
+
+require 'lib/models'
 
 #@DEBUG
 #DB_PATH = "/home/dan/servertag/db.sqlite"
@@ -308,4 +309,10 @@ post '/initdb' do
 
     status 204
     body ""
+end
+
+
+# Home page
+get '/' do
+    erb "index.html".to_sym
 end
