@@ -156,7 +156,7 @@ end
 
 delete '/host/:hostname/:tagname' do |hostname,tagname|
     h = ServerTag::Host.find_by_name(hostname)
-    h.tags.reject! {|tag|; tag == tagname}
+    h.tags.reject! {|tag|; tag == tagname.downcase}
     h.save
 
     status 204
