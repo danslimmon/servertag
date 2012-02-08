@@ -3,7 +3,7 @@ require 'rubberband'
 
 module ServerTag
     class Host
-        attr_accessor :name, :tags, :es_id
+        attr_accessor :name,:es_id
 
         def initialize
             @_client = nil
@@ -37,13 +37,6 @@ module ServerTag
             ElasticSearch.new('127.0.0.1:9200', :index => "servertag", :type => "host")
         end
 
-        def _assert_savable
-            if @name.empty? or not @tags.is_a?(Array)
-                raise HTTPInternalServerError.new(
-                    "Tried to save invalid host to DB:\n\n#{self.inspect}")
-            end
-        end
-
         def self._assert_valid_hostname(hostname)
             unless hostname =~ /^[a-z0-9-]+$/
                 raise HTTPBadRequestError.new(
@@ -51,8 +44,23 @@ module ServerTag
             end
         end
 
+        def _assert_savable
+            if @name.empty? or not @tags.is_a?(Array)
+                raise HTTPInternalServerError.new(
+                    "Tried to save invalid host to DB:\n\n#{self.inspect}")
+            end
+        end
+
         def _populate_client!
             @_client = Host._new_client() if @_client.nil?
+        end
+
+        def tags
+            @tags
+        end
+
+        def tags=(new_tags)
+            @tags = new_tags.map {|tag|; tag.downcase}
         end
 
         def save

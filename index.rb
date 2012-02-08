@@ -144,7 +144,9 @@ post '/host/:hostname' do |hostname|
         h.name = hostname
         h.tags = []
     end
-    h.tags = [h.tags, post_obj["tags"]].flatten.uniq
+
+    new_tags = post_obj["tags"].map {|tag|; tag.downcase}
+    h.tags = [h.tags, new_tags].flatten.uniq
     h.save
 
     status 204
