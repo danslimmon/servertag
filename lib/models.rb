@@ -7,6 +7,7 @@ module ServerTag
 
         def initialize
             @_client = nil
+            @_removed = false
         end
 
         def self.find_by_name(hostname)
@@ -81,11 +82,19 @@ module ServerTag
             @name = new_name.downcase
         end
 
+        def remove!
+            @_removed = true
+        end
+
         def save
             _assert_savable
             _populate_client!
 
-            @_client.index({:name => @name, :tags => @tags}, :id => @es_id)
+            if @_removed
+                @_client.delete(@es_id)
+            else
+                @_client.index({:name => @name, :tags => @tags}, :id => @es_id)
+            end
         end
     end
 end

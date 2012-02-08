@@ -154,6 +154,16 @@ post '/host/:hostname' do |hostname|
 end
 
 
+delete '/host/:hostname' do |hostname|
+    h = ServerTag::Host.find_by_name(hostname)
+    h.remove!
+    h.save
+
+    status 204
+    body ""
+end
+
+
 delete '/host/:hostname/:tagname' do |hostname,tagname|
     h = ServerTag::Host.find_by_name(hostname)
     h.tags.reject! {|tag|; tag == tagname.downcase}
