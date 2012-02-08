@@ -3,7 +3,7 @@ require 'rubberband'
 
 module ServerTag
     class Host
-        attr_accessor :name,:es_id
+        attr_accessor :es_id
 
         def initialize
             @_client = nil
@@ -61,6 +61,14 @@ module ServerTag
 
         def tags=(new_tags)
             @tags = new_tags.map {|tag|; tag.downcase}
+        end
+
+        def name
+            @name
+        end
+
+        def name=(new_name)
+            @name = new_name.downcase
         end
 
         def save
