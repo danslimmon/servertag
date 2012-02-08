@@ -111,6 +111,14 @@ end
 
 
 # Accessing by host
+get '/host' do
+    hosts = ServerTag::Host.all
+
+    v = ServerTag::View.new("host_index", request.accept)
+    erb v.template_name, :locals => {:hosts => hosts}
+end
+
+
 get '/host/:hostname' do |hostname|
     host = ServerTag::Host.find_by_name(hostname)
 

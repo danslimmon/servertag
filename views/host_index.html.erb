@@ -1,0 +1,51 @@
+<%= erb "header.html".to_sym %>
+
+<% hosts = locals[:hosts] %>
+<body>
+<div class="container-fluid">
+<div class="content">
+    <h1>Hosts</h1>
+    <br />
+<%
+if hosts.empty?
+    %>
+        <div>No hosts.</div>
+<%
+else
+    %>
+    <input type="text" id="quickFilter" placeholder="Start typing to filter the list..." />
+    <!-- Hosts -->
+    <table class="servertag-quickFilterTable table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th class="span4">Hostname</th>
+                <th>Tags</th>
+            </tr>
+        </thead>
+    <%
+    hosts.sort.each do |host|
+        %>
+        <tr>
+            <td><%= host.name %></td>
+            <td>
+        <%
+        host.tags.each do |tag|
+            %>
+                <span class="label"><%= tag %></span>
+        <%
+        end
+        %>
+            </td>
+        </tr>
+    <%
+    end
+    %>
+    </table>
+<%
+end
+%>
+</div>
+</div>
+</body>
+
+<%= erb "footer.html".to_sym %>

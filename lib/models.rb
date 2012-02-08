@@ -18,6 +18,12 @@ module ServerTag
             
             _hit_to_host(hits[0])
         end
+        
+        def self.all
+            client = _new_client
+            hits = client.search("name:*").hits
+            hits.map {|hit|; _hit_to_host(hit)}
+        end
 
         # Converts an elasticsearch hit instance to a Host instance.
         def self._hit_to_host(es_hit)
