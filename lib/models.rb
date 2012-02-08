@@ -51,6 +51,10 @@ module ServerTag
             end
         end
 
+        def <=>(other_host)
+            @name <=> other_host.name
+        end
+
         def _populate_client!
             @_client = Host._new_client() if @_client.nil?
         end
