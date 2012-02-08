@@ -29,7 +29,7 @@ else
             <td><%= host.name %></td>
             <td>
         <%
-        host.tags.each do |tag|
+        host.tags.sort.each do |tag|
             %>
                 <span class="label"><%= tag %></span>
         <%
