@@ -165,12 +165,15 @@ end
 
 
 # Accessing by tag
-get '/tag/:tagname' do |tagname|
-    db = ServerTag::DatabaseConnectionFactory.get
-    host_tags = ServerTag::HostTag.find_all(db, :tag => tagname)
+delete '/tag/:tagname' do |tagname|
+    hosts = ServerTag::Host.find_by_tag(tagname)
+    hosts.map! do |h|
+        h.tags.reject! {|tag|; tag == tagname.downcase}
+        h.save
+    end
 
-    v = ServerTag::View.new("tag", request.accept)
-    erb v.template_name, :locals => {:tagname => tagname, :host_tags => host_tags}
+    status 204
+    body ""
 end
 
 

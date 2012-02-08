@@ -18,6 +18,12 @@ module ServerTag
             
             _hit_to_host(hits[0])
         end
+
+        def self.find_by_tag(tagname)
+            client = _new_client
+            hits = client.search("tags:#{tagname}").hits
+            hits.map {|h|; _hit_to_host(h)}
+        end
         
         def self.all
             client = _new_client
