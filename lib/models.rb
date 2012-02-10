@@ -97,4 +97,76 @@ module ServerTag
             end
         end
     end
+
+    class HistoryEvent
+        attr_accessor :es_id
+
+        def initialize(message)
+            @_client = nil
+        end
+
+        def self.search_for_terms(terms)
+            client = _new_client
+            hits = client.search("message:*").hits
+            hits.map {|hit|; _hit_to_event(hit)}
+        end
+
+        # Converts an elasticsearch hit instance to a HistoryEvent instance.
+        def self._hit_to_event(es_hit)
+            he = HistoryEvent.new
+            he.message, he.es_id = es_hit.message, es_hit._id
+
+            he
+        end
+
+        def self._new_client
+            ElasticSearch.new('127.0.0.1:9200', :index => "servertag", :type => "history_event")
+        end
+
+        def _assert_savable
+            if @message.empty?
+                raise HTTPInternalServerError.new(
+                    "Tried to save invalid history event to DB:\n\n#{self.inspect}")
+            end
+        end
+
+        def <=>(other_host)
+            @name <=> other_host.name
+        end
+
+        def _populate_client!
+            @_client = Host._new_client() if @_client.nil?
+        end
+
+        def tags
+            @tags
+        end
+
+        def tags=(new_tags)
+            @tags = new_tags.map {|tag|; tag.downcase}
+        end
+
+        def name
+            @name
+        end
+
+        def name=(new_name)
+            @name = new_name.downcase
+        end
+
+        def remove!
+            @_removed = true
+        end
+
+        def save
+            _assert_savable
+            _populate_client!
+
+            if @_removed
+                @_client.delete(@es_id)
+            else
+                @_client.index({:name => @name, :tags => @tags}, :id => @es_id)
+            end
+        end
+    end
 end

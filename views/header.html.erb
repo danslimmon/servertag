@@ -1,18 +1,39 @@
 <html>
     <!-- Header -->
     <head>
-        <link rel="stylesheet" type="text/css" href="/assets/bootstrap/css/bootstrap.min.css">
+        <link rel="stylesheet" type="text/css" href="/assets/bootstrap/css/bootstrap.min.css" />
+        <link rel="stylesheet" type="text/css" href="/assets/css/servertag.css" />
 
         <script type="text/javascript" src="/assets/js/jquery-1.7.1.min.js"></script>
         <script type="text/javascript" src="/assets/bootstrap/js/bootstrap.min.js"></script>
         <script type="text/javascript" src="/assets/js/jquery.dataTables.min.js"></script>
         <script type="text/javascript" charset="utf-8">
 $(document).ready(function() {
-    // Make tables filterable
+    // ************ dataTables
+    // Styling
+    $.fn.dataTableExt.oStdClasses.sFilter = "dataTables_filter pull-left";
+    // Allows us to disable pagination 
+    $.fn.dataTableExt.oPagination.none = {
+        fnInit: function(){},
+        fnUpdate: function() {
+            $('.dataTables_length').hide();
+            $('.dataTables_info').hide();
+            $('.dataTables_paginate').hide();
+        }
+    };
+    // Initialize table
     $('.servertag-dataTable').dataTable({
-        "bJQueryUI": true,
-        "sPaginationType": "full_numbers"
+        "bJQueryUI": false,
+        // Custom pagination type defined above
+        "sPaginationType": "none",
+        // Override some text
+        "oLanguage": {
+            "sSearch": "",
+            "sZeroRecords": "No matches"
+        }
     });
+    // More styling (needs to be done after table init)
+    $('.dataTables_filter>input').attr('placeholder', 'Start typing to filter...');
 });
     </script>
 
