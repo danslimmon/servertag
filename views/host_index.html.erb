@@ -18,6 +18,7 @@ else
     <table class="servertag-dataTable table table-striped table-bordered">
         <thead>
             <tr>
+                <th class="checkbox-cell"><input type="checkbox" /></th>
                 <th class="span4">Hostname</th>
                 <th>Tags</th>
             </tr>
@@ -27,6 +28,7 @@ else
     hosts.sort.each do |host|
         %>
         <tr>
+            <td class="checkbox-cell"><input type="checkbox" /></td>
             <td><%= host.name %></td>
             <td>
         <%
