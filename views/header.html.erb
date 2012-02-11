@@ -36,6 +36,12 @@ $(document).ready(function() {
     $('.dataTables_filter>input').attr('placeholder', 'Start typing to filter...')
                                  .attr('style', 'height: 28px;');
     $('.checkbox-cell').attr('style', 'width: 12px;');
+
+    // *********** Multi-select on table rows
+    // Callback to check all row boxes when the header box is checked
+    $('.servertag-dataTable th>input').change(function() {
+        $('td>input').prop('checked', $('th>input').prop('checked'));
+    });
 });
     </script>
 
