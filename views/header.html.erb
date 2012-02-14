@@ -42,6 +42,22 @@ $(document).ready(function() {
     $('.servertag-dataTable th>input').change(function() {
         $('td>input').prop('checked', $('th>input').prop('checked'));
     });
+
+    // Finds out which hosts are checked
+    function checked_hosts() {
+        var hosts = new Array();
+        $('input.host-row:checked')
+            .closest('tr')
+            .each(function() {
+                hosts.push($(this).attr('servertag-hostname'))
+            });
+        return hosts;
+    }
+
+    // *********** Modal submission callbacks
+    $('#add-tags-submit').click(function() {
+        alert(checked_hosts());
+    });
 });
     </script>
 

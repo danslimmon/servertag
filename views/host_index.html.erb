@@ -15,7 +15,7 @@ if hosts.empty?
 else
     %>
     <div class="pull-right">
-        <a class="btn btn-primary">Add Tags</a>
+        <a class="btn btn-primary" href="javascript:$('#add-tags-modal').modal('show');">Add Tags</a>
     </div>
 
     <table class="servertag-dataTable table table-striped table-bordered">
@@ -30,8 +30,8 @@ else
     <%
     hosts.sort.each do |host|
         %>
-        <tr>
-            <td><input type="checkbox" /></td>
+        <tr servertag-hostname="<%= host.name %>">
+            <td><input type="checkbox" class="host-row" /></td>
             <td><%= host.name %></td>
             <td>
         <%
@@ -52,6 +52,21 @@ else
 end
 %>
 </div>
+</div>
+
+<div id="add-tags-modal" class="modal hide fade in">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">x</a>
+        <h3>Add Tags</h3>
+    </div>
+    <div class="modal-body">
+        <p>What tags do you want to add?</p>
+        <input type="text" placeholder="Tags to add..." class="input-xlarge" />
+    </div>
+    <div class="modal-footer">
+        <a id="add-tags-submit" href="javascript:false;" data-dismiss="modal" class="btn btn-primary">Add</a>
+        <a class="btn" data-dismiss="modal">Cancel</a>
+    </div>
 </div>
 </body>
 
