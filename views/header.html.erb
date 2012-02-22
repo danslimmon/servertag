@@ -43,10 +43,11 @@ $(document).ready(function() {
         $('td>input').prop('checked', $('th>input').prop('checked'));
     });
 
+    // *********** Library
     // Finds out which hosts are checked
-    function checked_hosts() {
+    function checkedHosts() {
         var hosts = new Array();
-        $('input.host-row:checked')
+        $('input.servertag-host-checkbox:checked')
             .closest('tr')
             .each(function() {
                 hosts.push($(this).attr('servertag-hostname'))
@@ -54,10 +55,97 @@ $(document).ready(function() {
         return hosts;
     }
 
-    // *********** Modal submission callbacks
-    $('#add-tags-submit').click(function() {
-        alert(checked_hosts());
-    });
+    function tagsToAdd() {
+        var tags = new Array();
+        tags = ["herp", "derp"];
+        return tags;
+    }
+
+    // Given a table cell (of the type .servertag-tag-cell), returns the
+    // list of tags present in it, as strings.
+    function extractTagsFromCell(cell) {
+        return $(cell)
+            .children('span.servertag-tag')
+            .map(function(){
+                return $(this).attr('servertag-tagname').toString();
+                })
+            .toArray();
+    }
+
+    // Turns the given array of tag names into an array of <span>
+    // elements for display in our table.
+    function tagNamesToSpans(tag_names) {
+        return $(tag_names)
+        .map(function(){
+            // Map tag names to basic spans
+            return $('<span>')
+                .addClass('servertag-tag-cell label')
+                .attr('servertag-tagname', this.toString())
+                .text(this.toString());
+            })
+        .each(function(){
+            // Mark exclusive tags (those with a ':') differently
+            if (this.toString().indexOf(':') != -1) {
+                t_span.addClass('label-info');
+            }
+            })
+        .toArray();
+    }
+
+    // Adds the given tags to the given hosts with an Ajax call, then
+    // modifies the table accordingly.
+    function addTagsToHosts(hosts, new_tags) {
+        // Update the table.
+        $('.servertag-host-row>.servertag-tag-cell')
+        .each(function(){
+            // Associate each cell with the array of tags it now contains.
+            tags = extractTagsFromCell(this)
+                .concat(new_tags)
+                .sort();
+
+            // Find just the unique tag names.
+            tag_hash = Array();
+            $(tags).each(function(){
+                tag_hash[this] = true
+                });
+
+            $(this).data().servertag_tags = keys(tag_hash);
+            })
+        .empty()
+        .each(function(){
+            // Make new tag spans for each tag the cell now contains.
+            $(this).append(tagNamesToSpans($(this).data().servertag_tags)).join("\n");
+        });
+    }
+
+    // *********** Callbacks
+    // Called on a click of the "Add Tags" button. Opens the modal.
+    function addTagsModalOpen() {
+        hosts = checkedHosts();
+        if (hosts.length == 0) {
+            $('#no-hosts-checked-alert').show();
+            return;
+        }
+
+        $('#add-tags-modal').modal('show');
+    }
+
+    // Called when "Add Tags" modal is submitted. Adds the tags via Ajax.
+    function addTagsModalSubmit() {
+        hosts = checkedHosts();
+        tags = tagsToAdd();
+        if (tags.length == 0) {
+            $('#no-tags-specified-alert').show();
+            return;
+        }
+
+        addTagsToHosts(hosts, tags);
+        $('#add-tags-modal').modal('hide');
+    }
+
+    // *********** Callback assignments
+    $('#add-tags-btn').click(function() {addTagsModalOpen();});
+    $('#add-tags-submit').click(function() {addTagsModalSubmit();});
 });
     </script>
 

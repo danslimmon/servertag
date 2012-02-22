@@ -15,7 +15,7 @@ if hosts.empty?
 else
     %>
     <div class="pull-right">
-        <a class="btn btn-primary" href="javascript:$('#add-tags-modal').modal('show');">Add Tags</a>
+        <a id="add-tags-btn" class="btn btn-primary" href="javascript:false;">Add Tags</a>
     </div>
 
     <table class="servertag-dataTable table table-striped table-bordered">
@@ -30,14 +30,14 @@ else
     <%
     hosts.sort.each do |host|
         %>
-        <tr servertag-hostname="<%= host.name %>">
-            <td><input type="checkbox" class="host-row" /></td>
+        <tr servertag-hostname="<%= host.name %>" class="servertag-host-row">
+            <td><input type="checkbox" class="servertag-host-checkbox" /></td>
             <td><%= host.name %></td>
-            <td>
+            <td class="servertag-tag-cell">
         <%
         host.tags.sort.each do |tag|
-            %>
-                <span class="label <%= tag =~ /:/ ? "label-info" : "" %>"><%= tag %></span>
+        %>
+            <%= erb "tag_partial.html".to_sym, :locals => {:tag => tag} %>
         <%
         end
         %>
@@ -61,11 +61,19 @@ end
     </div>
     <div class="modal-body">
         <p>What tags do you want to add?</p>
-        <input type="text" placeholder="Tags to add..." class="input-xlarge" />
+        <input id="add-tags-textbox" type="text" placeholder="Tags to add..." class="input-xlarge" />
     </div>
     <div class="modal-footer">
         <a id="add-tags-submit" href="javascript:false;" data-dismiss="modal" class="btn btn-primary">Add</a>
         <a class="btn" data-dismiss="modal">Cancel</a>
+    </div>
+
+    <div id="#tag-templates">
+        <% puts "Hey" %>
+        <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true} %>
+        <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :exclusive => true} %>
+        <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :just_added => true} %>
+        <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :just_added => true, :exclusive => true} %>
     </div>
 </div>
 </body>

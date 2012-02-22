@@ -20,9 +20,9 @@ module ServerTag
             _hit_to_host(hits[0])
         end
 
-        def self.find_by_tag(tagname)
+        def self.find_by_tag(tag)
             client = _new_client
-            hits = client.search("tags:#{tagname}").hits
+            hits = client.search("tags:#{tag.name}").hits
             hits.map {|h|; _hit_to_host(h)}
         end
         
@@ -35,7 +35,8 @@ module ServerTag
         # Converts an elasticsearch hit instance to a Host instance.
         def self._hit_to_host(es_hit)
             h = Host.new
-            h.name, h.tags, h.es_id = es_hit.name, es_hit.tags, es_hit._id
+            h.name, h.es_id = es_hit.name, es_hit._id
+            h.add_tags!(es_hit.tags)
 
             h
         end
@@ -70,8 +71,8 @@ module ServerTag
             @tags
         end
 
-        def tags=(new_tags)
-            @tags = new_tags.map {|tag|; tag.downcase}
+        def add_tags!(tag_names)
+            @tags = tag_names.map {|tag_name|; Tag.new(tag_name)}
         end
 
         def name
@@ -93,7 +94,7 @@ module ServerTag
             if @_removed
                 @_client.delete(@es_id)
             else
-                @_client.index({:name => @name, :tags => @tags}, :id => @es_id)
+                @_client.index({:name => @name, :tags => _tag_names}, :id => @es_id)
             end
         end
     end
@@ -142,8 +143,13 @@ module ServerTag
             @tags
         end
 
-        def tags=(new_tags)
-            @tags = new_tags.map {|tag|; tag.downcase}
+        def _tag_names
+            @tags.map {|tag|; tag.name}
+        end
+
+        def add_tags!(new_tag_names)
+            @tags = new_tag_names.map {|tag_name|; Tag.new(tag_name)}
+            puts @tags.inspect
         end
 
         def name
@@ -165,8 +171,39 @@ module ServerTag
             if @_removed
                 @_client.delete(@es_id)
             else
-                @_client.index({:name => @name, :tags => @tags}, :id => @es_id)
+                @_client.index({:name => @name, :tags => _tag_names}, :id => @es_id)
             end
+        end
+    end
+
+    class Tag
+        attr_accessor :name, :exclusive, :prefix, :suffix
+
+        def initialize(tag_name)
+            @name = _normalize(tag_name)
+            @exclusive = false
+            @prefix = nil
+            @suffix = nil
+
+            unless (tag_name =~ /(.+):(.+)/).nil?
+                @exclusive = true
+                @prefix = $1
+                @suffix = $2
+            end
+        end
+
+        def <=>(other_tag)
+            @name <=> other_tag.name
+        end
+
+        def _normalize(tag_name)
+            tag_name.downcase
+        end
+    end
+
+    class NullTag < Tag
+        def initialize
+            super("")
         end
     end
 end

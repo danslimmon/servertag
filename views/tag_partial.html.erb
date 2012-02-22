@@ -1,0 +1,24 @@
+<%
+tag = locals[:tag]
+exclusive = (tag.exclusive == true || locals[:exclusive] == true)
+just_added = (locals[:just_added] == true)
+template = (locals[:template] == true)
+
+classes = ["servertag-tag", "label"]
+
+if exclusive
+    classes.push("label-info")
+    classes.push("servertag-exclusive")
+end
+
+if just_added
+    classes.push("fade")
+    classes.push("in")
+end
+
+if template
+    classes.push("hide")
+    classes.push("servertag-tag-template")
+end
+%>
+                <span class="<%= classes.join(" ") %>" servertag-tagname="<%= tag.name %>"><%= tag.name %></span>
