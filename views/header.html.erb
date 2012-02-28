@@ -45,8 +45,10 @@ $(document).ready(function() {
     // *********** Callback assignments
     $('#add-tags-btn').click(function() {addTagsModalOpen();});
     $('#add-tags-submit').click(function() {addTagsModalSubmit();});
+    $('#add-tags-modal form').submit(function() {addTagsModalSubmit();});
     $('#remove-tags-btn').click(function() {removeTagsModalOpen();});
     $('#remove-tags-submit').click(function() {removeTagsModalSubmit();});
+    $('#remove-tags-modal form').submit(function() {removeTagsModalSubmit();});
 });
 
 // *********** Library
