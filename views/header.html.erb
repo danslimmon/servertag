@@ -70,6 +70,15 @@ function tagsInBox(box) {
         .split(' ');
 }
 
+// Returns all the tags we know about, as an array of strings.
+function allTags() {
+    var tags = [];
+    $('.servertag-tag').each(function(){
+        tags.push($(this).attr('servertag-tagname'));
+    });
+    return tags;
+}
+
 // Given a table cell (of the type .servertag-tag-cell), returns the
 // list of tags present in it, as strings.
 function extractTagsFromCell(cell) {
@@ -167,6 +176,8 @@ function removeTagsModalOpen() {
         .modal({keyboard: true})
         .on('shown', function(){$('#remove-tags-modal :text').focus();})
         .modal('show');
+    $('#remove-tags-modal :text')
+        .typeahead({source: allTags()});
     // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
     // until you hovered over a button
     $('#remove-tags-submit').hover();
