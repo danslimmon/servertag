@@ -61,9 +61,9 @@ function checkedHosts() {
     return hosts;
 }
 
-// Returns the tags that the user wants to add to the checked hosts
-function tagsToAdd() {
-    return $('#add-tags-modal :text')
+// Returns the tags that the user typed in the given text box
+function tagsToAdd(box) {
+    return box
         .val()
         .split(' ');
 }
@@ -163,7 +163,7 @@ function removeTagsModalOpen() {
 // Called when "Add Tags" modal is submitted. Adds the tags via Ajax.
 function addTagsModalSubmit() {
     hosts = checkedHosts();
-    tags = tagsToAdd();
+    tags = tagsInBox($('#add-tags-modal :text'));
     if (tags.length == 0) {
         $('#no-tags-specified-alert').show();
         return;
@@ -172,6 +172,20 @@ function addTagsModalSubmit() {
 
     addTagsToHosts(hosts, tags);
     $('#add-tags-modal').modal('hide');
+}
+
+// Called when "Remove Tags" modal is submitted. Removes the tags via Ajax.
+function removeTagsModalSubmit() {
+    hosts = checkedHosts();
+    tags = tagsInBox($('#remove-tags-modal :text'));
+    if (tags.length == 0) {
+        $('#no-tags-specified-alert').show();
+        return;
+    }
+    $('#remove-tags-modal :text').empty();
+
+    removeTagsFromHosts(hosts, tags);
+    $('#remove-tags-modal').modal('hide');
 }
     </script>
 
