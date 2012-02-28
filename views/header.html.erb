@@ -33,8 +33,7 @@ $(document).ready(function() {
         }
     });
     // More styling (needs to be done after table init)
-    $('.dataTables_filter>input').attr('placeholder', 'Start typing to filter...')
-                                 .attr('style', 'height: 28px;');
+    $('.dataTables_filter>input').attr('placeholder', 'Start typing to filter...');
     $('.checkbox-cell').attr('style', 'width: 12px;');
 
     // *********** Multi-select on table rows
@@ -43,120 +42,137 @@ $(document).ready(function() {
         $('td>input').prop('checked', $('th>input').prop('checked'));
     });
 
-    // *********** Library
-    // Finds out which hosts are checked
-    function checkedHosts() {
-        var hosts = new Array();
-        $('input.servertag-host-checkbox:checked')
-            .closest('tr')
-            .each(function() {
-                hosts.push($(this).attr('servertag-hostname'))
-            });
-        return hosts;
-    }
-
-    // Returns the tags that the user wants to add to the checked hosts
-    function tagsToAdd() {
-        return $('#add-tags-modal :text')
-            .val()
-            .split(' ');
-    }
-
-    // Given a table cell (of the type .servertag-tag-cell), returns the
-    // list of tags present in it, as strings.
-    function extractTagsFromCell(cell) {
-        return $(cell)
-            .children('span.servertag-tag')
-            .map(function(){
-                return $(this).attr('servertag-tagname').toString();
-                })
-            .toArray();
-    }
-
-    // Turns the given array of tag objects into an array of <span>
-    // elements for display in our table.
-    //
-    // Each tag object should have a 'name', 'exclusive', and 'just_added'
-    // attribute.
-    function tagToSpan(tag) {
-        var selector = 'div#tag-templates>span';
-        if (tag.exclusive) {selector += '.servertag-tag-exclusive';}
-        if (tag.just_added) {selector += '.servertag-tag-just-added';}
-
-        return $(selector)
-            .first()
-            .clone()
-            .removeClass('servertag-tag-template')
-            .attr('servertag-tagname', tag.name)
-            .text(tag.name);
-    }
-
-    // Adds the given tags to the given hosts with an Ajax call, then
-    // modifies the table accordingly.
-    function addTagsToHosts(hosts, new_tags) {
-        // Do the AJAX call
-        $.ajax({
-            url: "ajax/add_tags",
-            type: "POST",
-            data: {hosts: hosts, tags: new_tags},
-            dataType: "json"})
-            .done(updateTagTable);
-    }
-
-    // Callback to update the tag table once our AJAX request finishes.
-    //
-    // Receives the data that was returned from the server.
-    function updateTagTable(data) {
-        $(data.results).each(function(){
-            var cell = $('.servertag-host-row[servertag-hostname="' + this.hostname + '"]>.servertag-tag-cell')
-                .empty();
-
-            $(this.tags)
-                .each(function(){
-                    tagToSpan(this)
-                        .appendTo(cell);
-                    cell.append(' ');
-                    });
-        });
-    }
-
-    // Called on a click of the "Add Tags" button. Opens the modal.
-    function addTagsModalOpen() {
-        hosts = checkedHosts();
-        if (hosts.length == 0) {
-            $('#no-hosts-checked-alert').show();
-            return;
-        }
-
-        $('#add-tags-modal')
-            .modal({keyboard: true})
-            .on('shown', function(){$('#add-tags-modal :text').focus();})
-            .modal('show');
-        // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
-        // until you hovered over a button
-        $('#add-tags-submit').hover();
-    }
-
-    // Called when "Add Tags" modal is submitted. Adds the tags via Ajax.
-    function addTagsModalSubmit() {
-        hosts = checkedHosts();
-        tags = tagsToAdd();
-        if (tags.length == 0) {
-            $('#no-tags-specified-alert').show();
-            return;
-        }
-        $('#add-tags-modal :text').empty();
-
-        addTagsToHosts(hosts, tags);
-        $('#add-tags-modal').modal('hide');
-    }
-
     // *********** Callback assignments
     $('#add-tags-btn').click(function() {addTagsModalOpen();});
     $('#add-tags-submit').click(function() {addTagsModalSubmit();});
-//    $('#remove-tags-btn').click(function() {removeTagsModalOpen();});
-//    $('#remove-tags-submit').click(function() {removeTagsModalSubmit();});
+    $('#remove-tags-btn').click(function() {removeTagsModalOpen();});
+    $('#remove-tags-submit').click(function() {removeTagsModalSubmit();});
 });
+
+// *********** Library
+// Finds out which hosts are checked
+function checkedHosts() {
+    var hosts = new Array();
+    $('input.servertag-host-checkbox:checked')
+        .closest('tr')
+        .each(function() {
+            hosts.push($(this).attr('servertag-hostname'))
+        });
+    return hosts;
+}
+
+// Returns the tags that the user wants to add to the checked hosts
+function tagsToAdd() {
+    return $('#add-tags-modal :text')
+        .val()
+        .split(' ');
+}
+
+// Given a table cell (of the type .servertag-tag-cell), returns the
+// list of tags present in it, as strings.
+function extractTagsFromCell(cell) {
+    return $(cell)
+        .children('span.servertag-tag')
+        .map(function(){
+            return $(this).attr('servertag-tagname').toString();
+            })
+        .toArray();
+}
+
+// Turns the given array of tag objects into an array of <span>
+// elements for display in our table.
+//
+// Each tag object should have a 'name', 'exclusive', and 'just_added'
+// attribute.
+function tagToSpan(tag) {
+    var selector = 'div#tag-templates>span';
+    if (tag.exclusive) {selector += '.servertag-tag-exclusive';}
+    if (tag.just_added) {selector += '.servertag-tag-just-added';}
+
+    return $(selector)
+        .first()
+        .clone()
+        .removeClass('servertag-tag-template')
+        .attr('servertag-tagname', tag.name)
+        .text(tag.name);
+}
+
+// Adds the given tags to the given hosts with an Ajax call, then
+// modifies the table accordingly.
+function addTagsToHosts(hosts, new_tags) {
+    // Do the AJAX call
+    $.ajax({
+        url: "ajax/add_tags",
+        type: "POST",
+        data: {hosts: hosts, tags: new_tags},
+        dataType: "json"})
+        .done(updateTagTable);
+}
+
+// Callback to update the tag table once our AJAX request finishes.
+//
+// Receives the data that was returned from the server.
+function updateTagTable(data) {
+    $(data.results).each(function(){
+        var cell = $('.servertag-host-row[servertag-hostname="' + this.hostname + '"]>.servertag-tag-cell')
+            .empty();
+
+        $(this.tags)
+            .each(function(){
+                tagToSpan(this)
+                    .appendTo(cell);
+                cell.append(' ');
+                });
+    });
+}
+
+// Called on a click of the "Add Tags" button. Opens the modal.
+function addTagsModalOpen() {
+    hosts = checkedHosts();
+    if (hosts.length == 0) {
+        $('#no-hosts-checked-alert').show();
+        return;
+    }
+
+    $('#add-tags-modal')
+        .modal({keyboard: true})
+        .on('shown', function(){$('#add-tags-modal :text').focus();})
+        .modal('show');
+    // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
+    // until you hovered over a button
+    $('#add-tags-submit').hover();
+}
+
+// Called on a click of the "Remove Tags" button. Opens the modal.
+function removeTagsModalOpen() {
+    hosts = checkedHosts();
+    if (hosts.length == 0) {
+        $('#no-hosts-checked-alert').show();
+        return;
+    }
+
+    $('#remove-tags-modal')
+        .modal({keyboard: true})
+        .on('shown', function(){$('#remove-tags-modal :text').focus();})
+        .modal('show');
+    // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
+    // until you hovered over a button
+    $('#remove-tags-submit').hover();
+}
+
+// Called when "Add Tags" modal is submitted. Adds the tags via Ajax.
+function addTagsModalSubmit() {
+    hosts = checkedHosts();
+    tags = tagsToAdd();
+    if (tags.length == 0) {
+        $('#no-tags-specified-alert').show();
+        return;
+    }
+    $('#add-tags-modal :text').empty();
+
+    addTagsToHosts(hosts, tags);
+    $('#add-tags-modal').modal('hide');
+}
     </script>
 
     </head>
