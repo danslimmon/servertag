@@ -16,6 +16,7 @@ else
     %>
     <div class="pull-right">
         <a id="add-tags-btn" class="btn btn-primary" href="javascript:false;">Add Tags</a>
+        <a id="remove-tags-btn" class="btn btn-danger" href="javascript:false;">Remove Tags</a>
     </div>
 
     <table class="servertag-dataTable table table-striped table-bordered">
@@ -54,7 +55,7 @@ end
 </div>
 </div>
 
-<div id="add-tags-modal" class="modal hide fade in">
+<div id="add-tags-modal" class="modal hide fade">
     <div class="modal-header">
         <a class="close" data-dismiss="modal">x</a>
         <h3>Add Tags</h3>
@@ -65,6 +66,21 @@ end
     </div>
     <div class="modal-footer">
         <a id="add-tags-submit" href="javascript:false;" data-dismiss="modal" class="btn btn-primary">Add</a>
+        <a class="btn" data-dismiss="modal">Cancel</a>
+    </div>
+</div>
+
+<div id="remove-tags-modal" class="modal hide fade">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">x</a>
+        <h3>Remove Tags</h3>
+    </div>
+    <div class="modal-body">
+        <p>What tags do you want to remove?</p>
+        <input type="text" placeholder="Tags to remove..." class="input-xlarge" />
+    </div>
+    <div class="modal-footer">
+        <a id="remove-tags-submit" href="javascript:false;" data-dismiss="modal" class="btn btn-danger">Remove</a>
         <a class="btn" data-dismiss="modal">Cancel</a>
     </div>
 </div>

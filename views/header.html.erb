@@ -3,7 +3,6 @@
     <!-- Header -->
     <head>
         <link rel="stylesheet" type="text/css" href="/assets/bootstrap/css/bootstrap.min.css" />
-        <link rel="stylesheet" type="text/css" href="/assets/css/servertag.css" />
 
         <script type="text/javascript" src="/assets/js/jquery-1.7.1.min.js"></script>
         <script type="text/javascript" src="/assets/bootstrap/js/bootstrap.min.js"></script>
@@ -129,7 +128,13 @@ $(document).ready(function() {
             return;
         }
 
-        $('#add-tags-modal').modal('show');
+        $('#add-tags-modal')
+            .modal({keyboard: true})
+            .on('shown', function(){$('#add-tags-modal :text').focus();})
+            .modal('show');
+        // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
+        // until you hovered over a button
+        $('#add-tags-submit').hover();
     }
 
     // Called when "Add Tags" modal is submitted. Adds the tags via Ajax.
@@ -149,6 +154,8 @@ $(document).ready(function() {
     // *********** Callback assignments
     $('#add-tags-btn').click(function() {addTagsModalOpen();});
     $('#add-tags-submit').click(function() {addTagsModalSubmit();});
+//    $('#remove-tags-btn').click(function() {removeTagsModalOpen();});
+//    $('#remove-tags-submit').click(function() {removeTagsModalSubmit();});
 });
     </script>
 
