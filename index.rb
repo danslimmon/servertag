@@ -233,6 +233,42 @@ post '/ajax/add_tags' do
         hosts << h
     end
 
-    v = ServerTag::View.new("ajax_add_tags", :json)
+    v = ServerTag::View.new("ajax_tags_by_host", :json)
     erb v.template_name, :locals => {:hosts => hosts, :new_tag_names => tag_names}
+end
+
+post '/ajax/remove_tags' do
+    # Accepts a list of hosts and a list of tags; removes the tags from the hosts.
+    #
+    # Returns the resulting list of tags for each host, like so:
+    #   {'results': [
+    #     {
+    #       hostname: 'cleon',
+    #       tags: [
+    #         {name: 'env:prod', exclusive: true, just_added: false}
+    #       ]
+    #     },
+    #     {
+    #       hostname: 'swan',
+    #       tags: [
+    #         {name: 'env:stg', exclusive: true, just_added: false},
+    #         {name: 'bar', exclusive: false, just_added: false}
+    #       ]
+    #     }
+    #   ]} 
+    host_names = params["hosts"]
+    tag_names = params["tags"]
+    hosts = []
+
+    host_names.each do |hostname|
+        h = ServerTag::Host.find_by_name(hostname)
+
+        h.remove_tags!(tag_names)
+        h.save
+
+        hosts << h
+    end
+
+    v = ServerTag::View.new("ajax_tags_by_host", :json)
+    erb v.template_name, :locals => {:hosts => hosts, :new_tag_names => []}
 end

@@ -62,7 +62,7 @@ function checkedHosts() {
 }
 
 // Returns the tags that the user typed in the given text box
-function tagsToAdd(box) {
+function tagsInBox(box) {
     return box
         .val()
         .split(' ');
@@ -97,14 +97,24 @@ function tagToSpan(tag) {
         .text(tag.name);
 }
 
-// Adds the given tags to the given hosts with an Ajax call, then
-// modifies the table accordingly.
+// Adds the given tags to the given hosts with an Ajax call and
+// sets a callback to update the table accordingly.
 function addTagsToHosts(hosts, new_tags) {
-    // Do the AJAX call
     $.ajax({
         url: "ajax/add_tags",
         type: "POST",
         data: {hosts: hosts, tags: new_tags},
+        dataType: "json"})
+        .done(updateTagTable);
+}
+
+// Removes the given tags from the given hosts with an Ajax call and
+// sets a callback to update the table accordingly.
+function removeTagsFromHosts(hosts, tags) {
+    $.ajax({
+        url: "ajax/remove_tags",
+        type: "POST",
+        data: {hosts: hosts, tags: tags},
         dataType: "json"})
         .done(updateTagTable);
 }

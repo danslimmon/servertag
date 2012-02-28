@@ -84,6 +84,13 @@ module ServerTag
             @tags = (@tags + new_tags).uniq
         end
 
+        def remove_tags!(tag_names_to_remove)
+            # We convert to Tag instances to get the name normalization done
+            # before comparing
+            tag_names_to_remove = tag_names_to_remove.map {|tagname|; Tag.new(tagname).name}
+            @tags.reject! {|tag|; tag_names_to_remove.include?(tag.name)}
+        end
+
         def name
             @name
         end
