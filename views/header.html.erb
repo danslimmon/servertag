@@ -180,7 +180,7 @@ function addTagsModalSubmit() {
         $('#no-tags-specified-alert').show();
         return;
     }
-    $('#add-tags-modal :text').empty();
+    $('#add-tags-modal :text').val('');
 
     addTagsToHosts(hosts, tags);
     $('#add-tags-modal').modal('hide');
@@ -194,7 +194,7 @@ function removeTagsModalSubmit() {
         $('#no-tags-specified-alert').show();
         return;
     }
-    $('#remove-tags-modal :text').empty();
+    $('#remove-tags-modal :text').val('');
 
     removeTagsFromHosts(hosts, tags);
     $('#remove-tags-modal').modal('hide');
