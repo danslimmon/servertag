@@ -3,9 +3,9 @@
 <!-- host_index -->
 <% hosts = locals[:hosts] %>
 <body>
-<div class="container-fluid">
+<div class="container">
 <div class="content">
-    <h1>Hosts</h1>
+    <h1>ServerTag</h1>
     <br />
 <%
 if hosts.empty?
@@ -61,20 +61,19 @@ end
     </div>
     <div class="modal-body">
         <p>What tags do you want to add?</p>
-        <input id="add-tags-textbox" type="text" placeholder="Tags to add..." class="input-xlarge" />
+        <input type="text" placeholder="Tags to add..." class="input-xlarge" />
     </div>
     <div class="modal-footer">
         <a id="add-tags-submit" href="javascript:false;" data-dismiss="modal" class="btn btn-primary">Add</a>
         <a class="btn" data-dismiss="modal">Cancel</a>
     </div>
+</div>
 
-    <div id="#tag-templates">
-        <% puts "Hey" %>
-        <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true} %>
-        <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :exclusive => true} %>
-        <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :just_added => true} %>
-        <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :just_added => true, :exclusive => true} %>
-    </div>
+<div id="tag-templates" class="hide">
+    <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true} %>
+    <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :exclusive => true} %>
+    <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :just_added => true} %>
+    <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :just_added => true, :exclusive => true} %>
 </div>
 </body>
 

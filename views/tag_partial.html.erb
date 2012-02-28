@@ -8,16 +8,14 @@ classes = ["servertag-tag", "label"]
 
 if exclusive
     classes.push("label-info")
-    classes.push("servertag-exclusive")
+    classes.push("servertag-tag-exclusive")
 end
 
 if just_added
-    classes.push("fade")
-    classes.push("in")
+    classes.push("servertag-tag-just-added")
 end
 
 if template
-    classes.push("hide")
     classes.push("servertag-tag-template")
 end
 %>

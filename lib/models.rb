@@ -36,7 +36,7 @@ module ServerTag
         def self._hit_to_host(es_hit)
             h = Host.new
             h.name, h.es_id = es_hit.name, es_hit._id
-            h.add_tags!(es_hit.tags)
+            h.set_tags!(es_hit.tags)
 
             h
         end
@@ -67,12 +67,21 @@ module ServerTag
             @_client = Host._new_client() if @_client.nil?
         end
 
+        def _tag_names
+            @tags.map {|tag|; tag.name}
+        end
+
         def tags
             @tags
         end
 
+        def set_tags!(tag_names)
+            @tags = tag_names.map {|tag_name|; Tag.new(tag_name)}.uniq
+        end
+
         def add_tags!(tag_names)
-            @tags = tag_names.map {|tag_name|; Tag.new(tag_name)}
+            new_tags = tag_names.map {|tag_name|; Tag.new(tag_name)}
+            @tags = (@tags + new_tags).uniq
         end
 
         def name
@@ -81,6 +90,17 @@ module ServerTag
 
         def name=(new_name)
             @name = new_name.downcase
+        end
+
+        # Returns the Host instance as a hash for return values of AJAX calls.
+        #
+        # If passed, new_tag_names determines the value of each Tag hash's 'just_added'
+        # attribute.
+        def to_hash(new_tag_names=[])
+            {
+                "hostname" => @name,
+                "tags" => @tags.sort.map {|tag|; tag.to_hash(new_tag_names)}
+            }
         end
 
         def remove!
@@ -147,11 +167,6 @@ module ServerTag
             @tags.map {|tag|; tag.name}
         end
 
-        def add_tags!(new_tag_names)
-            @tags = new_tag_names.map {|tag_name|; Tag.new(tag_name)}
-            puts @tags.inspect
-        end
-
         def name
             @name
         end
@@ -196,8 +211,26 @@ module ServerTag
             @name <=> other_tag.name
         end
 
+        # Must override this and #hash to get uniqueness checking
+        def eql?(other_tag)
+            @name == other_tag.name
+        end
+
+        def hash
+            @name.hash
+        end
+
         def _normalize(tag_name)
             tag_name.downcase
+        end
+
+        # Returns the Tag instance as a hash, for return values for AJAX calls
+        def to_hash(new_tag_names=[])
+            {
+                "name" => @name,
+                "exclusive" => @exclusive,
+                "just_added" => new_tag_names.include?(@name)
+            }
         end
     end
 

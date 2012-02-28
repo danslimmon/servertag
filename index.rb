@@ -22,6 +22,10 @@ end
 
 module ServerTag
     class View
+        # Initializes given the base name of the template and the type of data to return.
+        #
+        # 'accept' may be an array like Sinatra's 'request.accept' or a single symbol such
+        # as :json or :html.
         def initialize(base_name, accept)
             @base_name = base_name
             @accept = accept
@@ -32,6 +36,10 @@ module ServerTag
         end
 
         def _data_type
+            if @accept.is_a?(Symbol)
+                return @accept.to_s
+            end
+
             @accept.each do |type|
                 if %q{text/x-json application/json}.include?(type)
                     return "json"
@@ -145,8 +153,8 @@ post '/host/:hostname' do |hostname|
         h.tags = []
     end
 
-    new_tags = post_obj["tags"].map {|tag|; tag.downcase}
-    h.tags = [h.tags, new_tags].flatten.uniq
+    new_tag_names = post_obj["tags"]
+    h.add_tags!(new_tags)
     h.save
 
     status 204
@@ -174,19 +182,6 @@ delete '/host/:hostname/:tagname' do |hostname,tagname|
 end
 
 
-# Accessing by tag
-delete '/tag/:tagname' do |tagname|
-    hosts = ServerTag::Host.find_by_tag(tagname)
-    hosts.map! do |h|
-        h.tags.reject! {|tag|; tag == tagname.downcase}
-        h.save
-    end
-
-    status 204
-    body ""
-end
-
-
 # History
 get '/history' do
     db = ServerTag::DatabaseConnectionFactory.get
@@ -201,4 +196,43 @@ end
 # Home page
 get '/' do
     erb "index.html".to_sym
+end
+
+# AJAX endpoints
+post '/ajax/add_tags' do
+    # Accepts a list of hosts and a list of tags; adds the tags to the hosts.
+    #
+    # Returns the resulting list of tags for each host, like so:
+    #   {'results': [
+    #     {
+    #       hostname: 'cleon',
+    #       tags: [
+    #         {name: 'foo', exclusive: false, just_added: true},
+    #         {name: 'env:prod', exclusive: true, just_added: false}
+    #       ]
+    #     },
+    #     {
+    #       hostname: 'swan',
+    #       tags: [
+    #         {name: 'foo', exclusive: false, just_added: true},
+    #         {name: 'env:stg', exclusive: true, just_added: false},
+    #         {name: 'bar', exclusive: false, just_added: false}
+    #       ]
+    #     }
+    #   ]} 
+    host_names = params["hosts"]
+    tag_names = params["tags"]
+    hosts = []
+
+    host_names.each do |hostname|
+        h = ServerTag::Host.find_by_name(hostname)
+
+        h.add_tags!(tag_names)
+        h.save
+
+        hosts << h
+    end
+
+    v = ServerTag::View.new("ajax_add_tags", :json)
+    erb v.template_name, :locals => {:hosts => hosts, :new_tag_names => tag_names}
 end
