@@ -85,6 +85,19 @@ end
     </div>
 </div>
 
+<div id="no-hosts-checked-alert" class="modal hide alert alert-error fade">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Nope!</h3>
+    </div>
+    <div class="modal-body">
+        You need to select hosts before you can do this.
+    </div>
+    <div class="modal-footer">
+        <a href="javascript:false;" data-dismiss="modal" class="btn">Ah. Okay.</a>
+    </div>
+</div>
+
 <div id="tag-templates" class="hide">
     <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true} %>
     <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :exclusive => true} %>

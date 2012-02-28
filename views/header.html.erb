@@ -130,7 +130,7 @@ function updateTagTable(data) {
 function addTagsModalOpen() {
     hosts = checkedHosts();
     if (hosts.length == 0) {
-        $('#no-hosts-checked-alert').show();
+        $('#no-hosts-checked-alert').modal('show');
         return;
     }
 
@@ -147,7 +147,7 @@ function addTagsModalOpen() {
 function removeTagsModalOpen() {
     hosts = checkedHosts();
     if (hosts.length == 0) {
-        $('#no-hosts-checked-alert').show();
+        $('#no-hosts-checked-alert').modal('show');
         return;
     }
 
