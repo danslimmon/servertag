@@ -81,6 +81,14 @@ module ServerTag
 
         def add_tags!(tag_names)
             new_tags = tag_names.map {|tag_name|; Tag.new(tag_name)}
+            new_prefixes = new_tags.
+                select {|tag|; tag.exclusive}.
+                map {|tag|; tag.prefix}
+            @tags.reject! do |current_tag|
+                # Remove any exclusive tags that have the same prefix as one of
+                # the new ones.
+                current_tag.exclusive and new_prefixes.include?(current_tag.prefix)
+            end
             @tags = (@tags + new_tags).uniq
         end
 
