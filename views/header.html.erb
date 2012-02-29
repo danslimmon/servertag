@@ -43,12 +43,15 @@ $(document).ready(function() {
     });
 
     // *********** Callback assignments
+    // Modals
     $('#add-tags-btn').click(function() {addTagsModalOpen();});
     $('#add-tags-submit').click(function() {addTagsModalSubmit();});
     $('#add-tags-modal form').submit(function() {addTagsModalSubmit();});
     $('#remove-tags-btn').click(function() {removeTagsModalOpen();});
     $('#remove-tags-submit').click(function() {removeTagsModalSubmit();});
     $('#remove-tags-modal form').submit(function() {removeTagsModalSubmit();});
+    // Clicking on row
+    $('tr.servertag-host-row').click(function() {toggleRowCheckbox($(this));});
 });
 
 // *********** Library
@@ -112,6 +115,14 @@ function extractTagsFromCell(cell) {
             return $(this).attr('servertag-tagname').toString();
             })
         .toArray();
+}
+
+// Toggles the checkbox for the given table row.
+function toggleRowCheckbox(row) {
+    var box = row
+        .find(':checkbox')
+        .first()
+    box.prop('checked', ! box.prop('checked'));
 }
 
 // Turns the given array of tag objects into an array of <span>
