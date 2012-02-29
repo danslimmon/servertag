@@ -54,6 +54,9 @@ $(document).ready(function() {
     $('#remove-tags-modal form').submit(function() {removeTagsModalSubmit();});
     // Clicking on row
     $('tr.servertag-host-row').click(function() {toggleRowCheckbox($(this));});
+    //     Make sure you can click the checkbox without bubbling up to the row
+    //     and getting it toggled back.
+    $('tr.servertag-host-row :checkbox').click(function(event) {event.stopPropagation();});
 });
 
 // *********** Library
