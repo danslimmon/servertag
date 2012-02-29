@@ -3,8 +3,10 @@
     <!-- Header -->
     <head>
         <link rel="stylesheet" type="text/css" href="/assets/bootstrap/css/bootstrap.min.css" />
+        <link rel="stylesheet" type="text/css" href="/assets/css/ui-lightness/jquery-ui-1.8.18.custom.css" />
 
         <script type="text/javascript" src="/assets/js/jquery-1.7.1.min.js"></script>
+        <script type="text/javascript" src="/assets/js/jquery-ui-1.8.18.custom.min.js"></script>
         <script type="text/javascript" src="/assets/bootstrap/js/bootstrap.min.js"></script>
         <script type="text/javascript" src="/assets/js/jquery.dataTables.min.js"></script>
         <script type="text/javascript" charset="utf-8">
@@ -71,6 +73,11 @@ function tagsInBox(box) {
     return box
         .val()
         .split(' ');
+}
+
+function lastStringPart(s) {
+    parts = s.split(' ');
+    return parts[parts.length -1];
 }
 
 function unique(a) {
@@ -212,8 +219,36 @@ function removeTagsModalOpen() {
         .on('shown', function(){$('#remove-tags-modal :text').focus();})
         .modal('show');
     $('#remove-tags-modal :text')
-        .typeahead({source: typeaheadItems(),
-                    matcher: typeaheadMatcher});
+        .keydown(function(event) {
+            if (event.keyCode === $.ui.keyCode.TAB) {
+                event.preventDefault();
+            }
+        })
+        .autocomplete({
+            source: typeaheadItems(),
+            autoFocus: true,
+            minLength: 0,
+            source: function(request, response) {
+                // delegate back to autocomplete, but extract the last term
+                response($.ui.autocomplete.filter(
+                    typeaheadItems(), lastStringPart(request.term)))
+                },
+            focus: function() {
+                // prevent value inserted on focus
+                return false;
+                },
+            select: function(event, ui) {
+                var terms = this.value.split(' ');
+                // remove the current input
+                terms.pop();
+                // add the selected item
+                terms.push( ui.item.value );
+                // add placeholder to get the space at the end
+                terms.push("");
+                this.value = terms.join(" ");
+                return false;
+                }
+            });
     // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
     // until you hovered over a button
     $('#remove-tags-submit').hover();
