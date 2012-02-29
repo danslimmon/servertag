@@ -70,13 +70,37 @@ function tagsInBox(box) {
         .split(' ');
 }
 
+function unique(a) {
+    var rslt = [];
+    var last_item = null;
+    for (i in a.sort()) {
+        if (a[i] != last_item) {
+            rslt.push(a[i]);
+        }
+        last_item = a[i];
+    }
+    return rslt;
+}
+
 // Returns all the tags we know about, as an array of strings.
-function allTags() {
+//
+// Appends a ' ' to each so that the user can continue typing.
+function typeaheadItems() {
     var tags = [];
-    $('.servertag-tag').each(function(){
-        tags.push($(this).attr('servertag-tagname'));
+    $('table span.servertag-tag').each(function(){
+        tags.push($(this).attr('servertag-tagname') + ' ');
     });
-    return tags;
+    return unique(tags);
+}
+
+// Determines whether the query that the user has typed matches an item.
+//
+// We only match the stuff after a ' ' so that the user can enter
+// multiple tags in the box.
+function typeaheadMatcher(item) {
+    var query_parts = this.query.split(' ');
+    var part = query_parts[query_parts.length - 1];
+    return (RegExp('^' + part, 'i').exec(item) !== null);
 }
 
 // Given a table cell (of the type .servertag-tag-cell), returns the
@@ -177,7 +201,8 @@ function removeTagsModalOpen() {
         .on('shown', function(){$('#remove-tags-modal :text').focus();})
         .modal('show');
     $('#remove-tags-modal :text')
-        .typeahead({source: allTags()});
+        .typeahead({source: typeaheadItems(),
+                    matcher: typeaheadMatcher});
     // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
     // until you hovered over a button
     $('#remove-tags-submit').hover();
