@@ -4,6 +4,7 @@
     <head>
         <link rel="stylesheet" type="text/css" href="/assets/bootstrap/css/bootstrap.min.css" />
         <link rel="stylesheet" type="text/css" href="/assets/css/ui-lightness/jquery-ui-1.8.18.custom.css" />
+        <link rel="stylesheet" type="text/css" href="/assets/css/servertag.css" />
 
         <script type="text/javascript" src="/assets/js/jquery-1.7.1.min.js"></script>
         <script type="text/javascript" src="/assets/js/jquery-ui-1.8.18.custom.min.js"></script>
@@ -38,13 +39,9 @@ $(document).ready(function() {
     $('.dataTables_filter>input').attr('placeholder', 'Start typing to filter...');
     $('.checkbox-cell').attr('style', 'width: 12px;');
 
-    // *********** Multi-select on table rows
-    // Callback to check all row boxes when the header box is checked
-    $('.servertag-dataTable th>input').change(function() {
-        $('td>input').prop('checked', $('th>input').prop('checked'));
-    });
-
     // *********** Callback assignments
+    // Check all row boxes when the header box is checked
+    $('.servertag-dataTable th>input').change(function() {headerCheckboxChanged();});
     // Modals
     $('#add-tags-btn').click(function() {addTagsModalOpen();});
     $('#add-tags-submit').click(function() {addTagsModalSubmit();});
@@ -56,7 +53,9 @@ $(document).ready(function() {
     $('tr.servertag-host-row').click(function() {toggleRowCheckbox($(this));});
     //     Make sure you can click the checkbox without bubbling up to the row
     //     and getting it toggled back.
-    $('tr.servertag-host-row :checkbox').click(function(event) {event.stopPropagation();});
+    $('tr.servertag-host-row :checkbox')
+        .click(function() {adjustRowSelectedClass($(this).closest('tr'));})
+        .click(function(event) {event.stopPropagation();});
 });
 
 // *********** Library
@@ -130,9 +129,24 @@ function extractTagsFromCell(cell) {
 // Toggles the checkbox for the given table row.
 function toggleRowCheckbox(row) {
     var box = row
-        .find(':checkbox')
-        .first()
+        .find(':checkbox:first')
     box.prop('checked', ! box.prop('checked'));
+    adjustRowSelectedClass(row);
+}
+
+function headerCheckboxChanged() {
+    $('tr.servertag-host-row :checkbox').prop('checked', $('th>input').prop('checked'));
+    $('tr.servertag-host-row').each(function() {
+        adjustRowSelectedClass($(this));
+    });
+}
+
+function adjustRowSelectedClass(row) {
+    if (row.find(':checkbox').first().is(':checked')) {
+        row.addClass('row-selected');
+    } else {
+        row.removeClass('row-selected');
+    }
 }
 
 // Turns the given array of tag objects into an array of <span>
