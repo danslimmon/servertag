@@ -54,7 +54,7 @@ $(document).ready(function() {
     //     Make sure you can click the checkbox without bubbling up to the row
     //     and getting it toggled back.
     $('tr.servertag-host-row :checkbox')
-        .click(function() {adjustRowSelectedClass($(this).closest('tr'));})
+        .click(function() {rowSelectionChanged();})
         .click(function(event) {event.stopPropagation();});
 });
 
@@ -131,14 +131,35 @@ function toggleRowCheckbox(row) {
     var box = row
         .find(':checkbox:first')
     box.prop('checked', ! box.prop('checked'));
-    adjustRowSelectedClass(row);
+    rowSelectionChanged();
 }
 
-function headerCheckboxChanged() {
-    $('tr.servertag-host-row :checkbox').prop('checked', $('th>input').prop('checked'));
+// Sets the Add/Remove Tags buttons to enabled or disabled, depending on
+// whether any hosts are selected.
+function updateTagButtons() {
+    $('.tag-actions .btn').each(function(){
+        if (checkedHosts().length > 0) {
+            $(this).removeClass('disabled');
+        } else {
+            $(this).addClass('disabled');
+        }
+    });
+}
+
+// Called whenever the set of selected rows may have changed.
+function rowSelectionChanged() {
     $('tr.servertag-host-row').each(function() {
         adjustRowSelectedClass($(this));
     });
+    updateTagButtons();
+}
+
+// Called when the header checkbox is changed.
+function headerCheckboxChanged() {
+    $('tr.servertag-host-row :checkbox')
+        .prop('checked', $('th>input')
+            .prop('checked'));
+    rowSelectionChanged();
 }
 
 function adjustRowSelectedClass(row) {
