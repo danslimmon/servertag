@@ -43,10 +43,10 @@ $(document).ready(function() {
     // Check all row boxes when the header box is checked
     $('.servertag-dataTable th>input').change(function() {headerCheckboxChanged();});
     // Modals
-    $('#add-tags-btn').click(function() {addTagsModalOpen();});
+    $('#add-tags-btn').click(function() {openTagModal('#add-tags-modal');});
     $('#add-tags-submit').click(function() {addTagsModalSubmit();});
     $('#add-tags-modal form').submit(function() {addTagsModalSubmit();});
-    $('#remove-tags-btn').click(function() {removeTagsModalOpen();});
+    $('#remove-tags-btn').click(function() {openTagModal('#remove-tags-modal');});
     $('#remove-tags-submit').click(function() {removeTagsModalSubmit();});
     $('#remove-tags-modal form').submit(function() {removeTagsModalSubmit();});
     // Clicking on row
@@ -227,36 +227,19 @@ function updateTagTable(data) {
     });
 }
 
-// Called on a click of the "Add Tags" button. Opens the modal.
-function addTagsModalOpen() {
+// Called on a click of the "Add" or "Remove Tags" button. Opens the modal.
+function openTagModal(selector) {
     hosts = checkedHosts();
     if (hosts.length == 0) {
         $('#no-hosts-checked-alert').modal('show');
         return;
     }
 
-    $('#add-tags-modal')
+    $(selector)
         .modal({keyboard: true})
-        .on('shown', function(){$('#add-tags-modal :text').focus();})
+        .on('shown', function(){$(selector).find(':text').focus();})
         .modal('show');
-    // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
-    // until you hovered over a button
-    $('#add-tags-submit').hover();
-}
-
-// Called on a click of the "Remove Tags" button. Opens the modal.
-function removeTagsModalOpen() {
-    hosts = checkedHosts();
-    if (hosts.length == 0) {
-        $('#no-hosts-checked-alert').modal('show');
-        return;
-    }
-
-    $('#remove-tags-modal')
-        .modal({keyboard: true})
-        .on('shown', function(){$('#remove-tags-modal :text').focus();})
-        .modal('show');
-    $('#remove-tags-modal :text')
+    $(selector).find(':text')
         .keydown(function(event) {
             if (event.keyCode === $.ui.keyCode.TAB) {
                 event.preventDefault();
@@ -282,14 +265,14 @@ function removeTagsModalOpen() {
                 // add the selected item
                 terms.push( ui.item.value );
                 // add placeholder to get the space at the end
-                terms.push("");
-                this.value = terms.join(" ");
+                terms.push('');
+                this.value = terms.join(' ');
                 return false;
                 }
             });
     // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
     // until you hovered over a button
-    $('#remove-tags-submit').hover();
+    $(selector).find('.servertag-submit-btn').hover();
 }
 
 // Called when "Add Tags" modal is submitted. Adds the tags via Ajax.
