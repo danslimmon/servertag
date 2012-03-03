@@ -3,8 +3,9 @@ require 'json'
 
 require 'sinatra'
 
+require 'lib/action'
 require 'lib/models'
-
+require 'lib/db_handler'
 
 configure do
     set :show_exceptions, false
@@ -51,37 +52,6 @@ module ServerTag
     end
 
 
-    # Represents an action performed by a user.
-    #
-    # 'action' is either 'add' or 'remove'
-    class HistoryEvent
-        attr_accessor :datetime, :user, :remote_host, :host, :tag, :action
-
-        def initialize(user, remote_host, host, tag, action, datetime="now");
-            @user = user
-            @remote_host = remote_host
-            @host = host
-            @tag = tag
-            @action = action
-            @datetime = datetime
-        end
-
-        # Saves the given HistoryEvent to the DB.
-        def save(db)
-            db.execute("INSERT INTO history (datetime, user, remote_host, host, tag, action)
-                            VALUES (datetime(:datetime), :user, :remote_host,
-                                    :host, :tag, :action);",
-                       "datetime" => @datetime,
-                       "user" => @user,
-                       "remote_host" => @remote_host,
-                       "host" => @host,
-                       "tag" => @tag,
-                       "action" => @action
-                      )
-        end
-    end
-
-
     class HTTPErrorModel
         attr_accessor :status, :name, :message
 
@@ -120,7 +90,8 @@ end
 
 # Accessing by host
 get '/host' do
-    hosts = ServerTag::Host.all
+    handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
+    hosts = handler.all
 
     v = ServerTag::View.new("host_index", request.accept)
     erb v.template_name, :locals => {:hosts => hosts}
@@ -224,8 +195,9 @@ post '/ajax/add_tags' do
     tag_names = params["tags"]
     hosts = []
 
+    handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     host_names.each do |hostname|
-        h = ServerTag::Host.find_by_name(hostname)
+        h = handler.by_name(hostname)
 
         h.add_tags!(tag_names)
         h.save
@@ -260,8 +232,9 @@ post '/ajax/remove_tags' do
     tag_names = params["tags"]
     hosts = []
 
+    handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     host_names.each do |hostname|
-        h = ServerTag::Host.find_by_name(hostname)
+        h = handler.by_name(hostname)
 
         h.remove_tags!(tag_names)
         h.save
