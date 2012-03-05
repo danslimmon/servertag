@@ -74,11 +74,12 @@ function checkedHosts() {
 function tagsInBox(box) {
     return box
         .val()
-        .split(' ');
+        .trimRight()
+        .split(/\s+/);
 }
 
 function lastStringPart(s) {
-    parts = s.split(' ');
+    parts = s.split(/\s+/);
     return parts[parts.length -1];
 }
 
@@ -249,7 +250,7 @@ function openTagModal(selector) {
                 return false;
                 },
             select: function(event, ui) {
-                var terms = this.value.split(/s+/);
+                var terms = this.value.split(/\s+/);
                 terms.pop();
                 terms.push(ui.item.value);
                 terms.push('');
