@@ -108,6 +108,288 @@ end
     <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :just_added => true} %>
     <%= erb "tag_partial.html".to_sym, :locals => {:tag => ServerTag::NullTag.new, :template => true, :just_added => true, :exclusive => true} %>
 </div>
+
+<script type="text/javascript" charset="utf-8">
+$(document).ready(function() {
+    // ************ dataTables
+    // Styling
+    $.fn.dataTableExt.oStdClasses.sFilter = "dataTables_filter pull-left";
+    // Allows us to disable pagination 
+    $.fn.dataTableExt.oPagination.none = {
+        fnInit: function(){},
+        fnUpdate: function() {
+            $('.dataTables_length').hide();
+            $('.dataTables_info').hide();
+            $('.dataTables_paginate').hide();
+        }
+    };
+    // Initialize table
+    $('.servertag-dataTable').dataTable({
+        "bJQueryUI": false,
+        // Custom pagination type defined above
+        "sPaginationType": "none",
+        // Override some text
+        "oLanguage": {
+            "sSearch": "",
+            "sZeroRecords": "No matches"
+        }
+    });
+    // More styling (needs to be done after table init)
+    $('.dataTables_filter>input').attr('placeholder', 'Start typing to filter...');
+    $('.checkbox-cell').attr('style', 'width: 12px;');
+
+    // *********** Callback assignments
+    // Check all row boxes when the header box is checked
+    $('.servertag-dataTable th>input').change(function() {headerCheckboxChanged();});
+    // Modals
+    $('#add-tags-btn').click(function() {openTagModal('#add-tags-modal');});
+    $('#add-tags-modal .servertag-submit-btn').click(function() {addTagsModalSubmit();});
+    $('#add-tags-modal form').submit(function() {addTagsModalSubmit();});
+    $('#remove-tags-btn').click(function() {openTagModal('#remove-tags-modal');});
+    $('#remove-tags-modal .servertag-submit-btn').click(function() {removeTagsModalSubmit();});
+    $('#remove-tags-modal form').submit(function() {removeTagsModalSubmit();});
+    // Clicking on row
+    $('tr.servertag-host-row').click(function() {toggleRowCheckbox($(this));});
+    //     Make sure you can click the checkbox without bubbling up to the row
+    //     and getting it toggled back.
+    $('tr.servertag-host-row :checkbox')
+        .click(function() {rowSelectionChanged();})
+        .click(function(event) {event.stopPropagation();});
+});
+
+// *********** Library
+// Finds out which hosts are checked
+function checkedHosts() {
+    var hosts = new Array();
+    $('input.servertag-host-checkbox:checked')
+        .closest('tr')
+        .each(function() {
+            hosts.push($(this).attr('servertag-hostname'))
+        });
+    return hosts;
+}
+
+// Returns the tags that the user typed in the given text box
+function tagsInBox(box) {
+    return box
+        .val()
+        .trimRight()
+        .split(/\s+/);
+}
+
+function lastStringPart(s) {
+    parts = s.split(/\s+/);
+    return parts[parts.length -1];
+}
+
+function unique(a) {
+    var rslt = [];
+    var last_item = null;
+    for (i in a.sort()) {
+        if (a[i] != last_item) {
+            rslt.push(a[i]);
+        }
+        last_item = a[i];
+    }
+    return rslt;
+}
+
+// Returns all the tags we know about, as an array of strings.
+//
+// Appends a ' ' to each so that the user can continue typing.
+function typeaheadItems() {
+    var tags = [];
+    $('table span.servertag-tag').each(function(){
+        tags.push($(this).attr('servertag-tagname'));
+    });
+    return unique(tags);
+}
+
+// Given a table cell (of the type .servertag-tag-cell), returns the
+// list of tags present in it, as strings.
+function extractTagsFromCell(cell) {
+    return $(cell)
+        .children('span.servertag-tag')
+        .map(function(){
+            return $(this).attr('servertag-tagname').toString();
+            })
+        .toArray();
+}
+
+// Toggles the checkbox for the given table row.
+function toggleRowCheckbox(row) {
+    var box = row
+        .find(':checkbox:first')
+    box.prop('checked', ! box.prop('checked'));
+    rowSelectionChanged();
+}
+
+// Sets the Add/Remove Tags buttons to enabled or disabled, depending on
+// whether any hosts are selected.
+function updateTagButtons() {
+    $('.tag-actions .btn').each(function(){
+        if (checkedHosts().length > 0) {
+            $(this).removeClass('disabled');
+        } else {
+            $(this).addClass('disabled');
+        }
+    });
+}
+
+// Called whenever the set of selected rows may have changed.
+function rowSelectionChanged() {
+    $('tr.servertag-host-row').each(function() {
+        adjustRowSelectedClass($(this));
+    });
+    updateTagButtons();
+}
+
+// Called when the header checkbox is changed.
+function headerCheckboxChanged() {
+    $('tr.servertag-host-row :checkbox')
+        .prop('checked', $('th>input')
+            .prop('checked'));
+    rowSelectionChanged();
+}
+
+function adjustRowSelectedClass(row) {
+    if (row.find(':checkbox').first().is(':checked')) {
+        row.addClass('row-selected');
+    } else {
+        row.removeClass('row-selected');
+    }
+}
+
+// Turns the given array of tag objects into an array of <span>
+// elements for display in our table.
+//
+// Each tag object should have a 'name', 'exclusive', and 'just_added'
+// attribute.
+function tagToSpan(tag) {
+    var selector = 'div#tag-templates>span';
+    if (tag.exclusive) {selector += '.servertag-tag-exclusive';}
+    if (tag.just_added) {selector += '.servertag-tag-just-added';}
+
+    return $(selector)
+        .first()
+        .clone()
+        .removeClass('servertag-tag-template')
+        .attr('servertag-tagname', tag.name)
+        .text(tag.name);
+}
+
+// Adds the given tags to the given hosts with an Ajax call and
+// sets a callback to update the table accordingly.
+function addTagsToHosts(hosts, new_tags) {
+    $.ajax({
+        url: "ajax/add_tags",
+        type: "POST",
+        data: {hosts: hosts, tags: new_tags},
+        dataType: "json"})
+        .done(updateTagTable);
+}
+
+// Removes the given tags from the given hosts with an Ajax call and
+// sets a callback to update the table accordingly.
+function removeTagsFromHosts(hosts, tags) {
+    $.ajax({
+        url: "ajax/remove_tags",
+        type: "POST",
+        data: {hosts: hosts, tags: tags},
+        dataType: "json"})
+        .done(updateTagTable);
+}
+
+// Callback to update the tag table once our AJAX request finishes.
+//
+// Receives the data that was returned from the server.
+function updateTagTable(data) {
+    $(data.results).each(function(){
+        var cell = $('.servertag-host-row[servertag-hostname="' + this.hostname + '"]>.servertag-tag-cell')
+            .empty();
+
+        $(this.tags)
+            .each(function(){
+                tagToSpan(this)
+                    .appendTo(cell);
+                cell.append(' ');
+                });
+    });
+}
+
+// Called on a click of the "Add" or "Remove Tags" button. Opens the modal.
+function openTagModal(selector) {
+    hosts = checkedHosts();
+    if (hosts.length == 0) {
+        $('#no-hosts-checked-alert').modal('show');
+        return;
+    }
+
+    $(selector)
+        .modal({keyboard: true})
+        .on('shown', function(){$(selector).find(':text').focus();})
+        .modal('show');
+    $(selector).find(':text')
+        .keydown(function(event) {
+            if (event.keyCode === $.ui.keyCode.TAB) {
+                event.preventDefault();
+            }
+        })
+        .autocomplete({
+            source: typeaheadItems(),
+            autoFocus: true,
+            minLength: 0,
+            source: function(request, response) {
+                // delegate back to autocomplete, but extract the last term
+                response($.ui.autocomplete.filter(
+                    typeaheadItems(), lastStringPart(request.term)))
+                },
+            focus: function() {
+                // prevent value inserted on focus
+                return false;
+                },
+            select: function(event, ui) {
+                var terms = this.value.split(/\s+/);
+                terms.pop();
+                terms.push(ui.item.value);
+                terms.push('');
+                this.value = terms.join(' ');
+                return false;
+                }
+            });
+    // Workaround for  Bootstrap bug where 'shown' callback wasn't triggering
+    // until you hovered over a button
+    $(selector).find('.servertag-submit-btn').hover();
+}
+
+// Called when "Add Tags" modal is submitted. Adds the tags via Ajax.
+function addTagsModalSubmit() {
+    hosts = checkedHosts();
+    tags = tagsInBox($('#add-tags-modal :text'));
+    if (tags.length == 0) {
+        $('#no-tags-specified-alert').show();
+        return;
+    }
+    $('#add-tags-modal :text').val('');
+
+    addTagsToHosts(hosts, tags);
+    $('#add-tags-modal').modal('hide');
+}
+
+// Called when "Remove Tags" modal is submitted. Removes the tags via Ajax.
+function removeTagsModalSubmit() {
+    hosts = checkedHosts();
+    tags = tagsInBox($('#remove-tags-modal :text'));
+    if (tags.length == 0) {
+        $('#no-tags-specified-alert').show();
+        return;
+    }
+    $('#remove-tags-modal :text').val('');
+
+    removeTagsFromHosts(hosts, tags);
+    $('#remove-tags-modal').modal('hide');
+}
+</script>
 </body>
 
 <%= erb "footer.html".to_sym %>
