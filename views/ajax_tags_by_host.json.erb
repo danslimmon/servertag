@@ -3,6 +3,6 @@ hosts = locals[:hosts]
 new_tag_names = locals[:new_tag_names]
 
 rval = {}
-rval["results"] = hosts.map {|host|; host.to_hash(new_tag_names)}
+rval["results"] = hosts.map {|host|; host.to_ajax_hash(new_tag_names)}
 %>
 <%= rval.to_json %>

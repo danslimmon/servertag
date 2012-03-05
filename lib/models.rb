@@ -44,8 +44,13 @@ module ServerTag
             @tags = tag_names.map {|tag_name|; Tag.new(tag_name)}.uniq
         end
 
+        # Adds the named tags to the Host. Returns the list of (names of) tags that were added.
+        #
+        # (So the return value doesn't contain any tags that were already present)
         def add_tags!(tag_names)
             new_tags = tag_names.map {|tag_name|; Tag.new(tag_name)}
+
+            # Maintain exclusivity
             new_prefixes = new_tags.
                 select {|tag|; tag.exclusive}.
                 map {|tag|; tag.prefix}
@@ -54,14 +59,20 @@ module ServerTag
                 # the new ones.
                 current_tag.exclusive and new_prefixes.include?(current_tag.prefix)
             end
+
+            rval = (new_tags - @tags).map {|t|; t.name}
             @tags = (@tags + new_tags).uniq
+            return rval
         end
 
         def remove_tags!(tag_names_to_remove)
             # We convert to Tag instances to get the name normalization done
             # before comparing
-            tag_names_to_remove = tag_names_to_remove.map {|tagname|; Tag.new(tagname).name}
+            tags_to_remove = tag_names_to_remove.map {|tagname|; Tag.new(tagname).name}
+            
+            rval = tag_names_to_remove.select {|tagname|; tag_names.include?(tagname)}
             @tags.reject! {|tag|; tag_names_to_remove.include?(tag.name)}
+            return rval
         end
 
         def name
@@ -76,15 +87,20 @@ module ServerTag
         #
         # If passed, new_tag_names determines the value of each Tag hash's 'just_added'
         # attribute.
-        def to_hash(new_tag_names=[])
+        def to_ajax_hash(new_tag_names=[])
             {
                 "hostname" => @name,
-                "tags" => @tags.sort.map {|tag|; tag.to_hash(new_tag_names)}
+                "tags" => @tags.sort.map {|tag|; tag.to_ajax_hash(new_tag_names)}
             }
         end
 
         def remove!
             @_removed = true
+        end
+
+        def to_db_hash
+            {:name => @name,
+             :tags => tag_names}
         end
 
         def save
@@ -139,7 +155,7 @@ module ServerTag
         end
 
         # Returns the Tag instance as a hash, for return values for AJAX calls
-        def to_hash(new_tag_names=[])
+        def to_ajax_hash(new_tag_names=[])
             {
                 "name" => @name,
                 "exclusive" => @exclusive,
@@ -154,25 +170,75 @@ module ServerTag
         end
     end
 
-    # Something a user has done in a request, e.g. adding some tags to a host.
+    # Something a user has done in a request, e.g. adding some tags to some hosts.
+    #
+    # 'datetime' is always stored in UTC. It's someone else's job to switch it to
+    # local time if desired.
+    #
+    # 'type' is either :add or :remove
+    # 'changed_tags' is a hash mapping each host name to the lists of tag namse that
+    #   changed on that host.
     class HistoryEvent < Model
-        attr_accessor :datetime, :user, :user_agent, :remote_host, :action_group
+        attr_accessor :datetime, :user, :user_agent, :remote_host, :diffs
 
-        def initialize(datetime, user, user_agent, remote_host, action_group)
-            @datetime = datetime
+        def initialize(datetime, user, user_agent, remote_host, type, changed_tags)
+            @datetime = datetime.new_offset(0)
             @user = user
             @user_agent = user_agent
             @remote_host = remote_host
-            @action_group = action_group
-            super
+            @diffs = _generate_diffs(type, changed_tags)
+
+            @_db_handler = DBHandlerFactory.handler_for(HistoryEvent)
+            super()
         end
 
-        def _es_object_type; "history_event"; end
+        # Generates message parts for the history event given the type of event and the changed tag
+        # names.
+        def _generate_diffs(type, changed_by_host)
+            # 'changed_by_tag' is a hash indexed by _array of tagnames_ where the value
+            # is the array of hostnames on which that exact change was made.
+            #
+            # We need to do it this way because we want to say shit like "Added tags 'foo' and
+            # 'bar' to host 'cleon'. Added tag 'foo' to host 'swan'.
+            changed_by_tags = {}
+            changed_by_tags.default = []
+            changed_by_host.each_pair do |hostname,tagnames|
+                changed_by_tags[tagnames] = changed_by_tags[tagnames] + [hostname]
+            end
+
+            diffs = []
+            changed_by_tags.each_pair do |tagnames,hostnames|
+                diffs << {:add => "Added tag(s) %s to host %s",
+                          :remove => "Removed tag(s) %s from host %s"}[type] %
+                         [_pp_list(tagnames), _pp_list(hostnames)]
+            end
+            diffs
+        end
+
+        # Pretty-prints the list of strings.
+        #
+        # E.g. _pp_list(['alpha', 'bravo', 'charlie']) yields "'alpha', 'bravo', and 'charlie'".
+        def _pp_list(a)
+            s = ""
+            s += a[0..-2].map {|w|; "'#{w}'"}.join(", ")
+            # Oxford comma
+            s += "," if a.length > 2
+            s += " and " if a.length > 1
+            s += "'#{a[-1]}'"
+
+            s
+        end
+
+        def to_db_hash
+            {:datetime => @datetime.strftime("%FT%T"),
+             :user => @user,
+             :user_agent => @user_agent,
+             :remote_host => @remote_host,
+             :diffs => @diffs}
+        end
 
         def save
-            _populate_client!
-
-            @_client.index({:name => @name, :tags => _tag_names}, :id => @es_id)
+            @_db_handler.index(self)
         end
     end
 end

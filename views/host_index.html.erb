@@ -23,7 +23,7 @@ else
         <thead>
             <tr>
                 <th class="checkbox-cell"><input type="checkbox" /></th>
-                <th class="span4">Hostname</th>
+                <th class="span3">Hostname</th>
                 <th>Tags</th>
             </tr>
         </thead>
@@ -33,7 +33,7 @@ else
         %>
         <tr servertag-hostname="<%= host.name %>" class="servertag-host-row">
             <td><input type="checkbox" class="servertag-host-checkbox" /></td>
-            <td><%= host.name %></td>
+            <td class="span3"><%= host.name %></td>
             <td class="servertag-tag-cell">
         <%
         host.tags.sort.each do |tag|

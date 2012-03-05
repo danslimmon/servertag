@@ -195,15 +195,24 @@ post '/ajax/add_tags' do
     tag_names = params["tags"]
     hosts = []
 
+    changed_tags = {}
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     host_names.each do |hostname|
         h = handler.by_name(hostname)
 
-        h.add_tags!(tag_names)
+        changed_tags[h.name] = h.add_tags!(tag_names)
         h.save
 
         hosts << h
     end
+
+    he = ServerTag::HistoryEvent.new(DateTime.now(),
+                                     user,
+                                     request.user_agent,
+                                     request.ip,
+                                     :add,
+                                     changed_tags)
+    he.save
 
     v = ServerTag::View.new("ajax_tags_by_host", :json)
     erb v.template_name, :locals => {:hosts => hosts, :new_tag_names => tag_names}
@@ -232,15 +241,24 @@ post '/ajax/remove_tags' do
     tag_names = params["tags"]
     hosts = []
 
+    changed_tags = {}
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     host_names.each do |hostname|
         h = handler.by_name(hostname)
 
-        h.remove_tags!(tag_names)
+        changed_tags[h.name] = h.remove_tags!(tag_names)
         h.save
 
         hosts << h
     end
+
+    he = ServerTag::HistoryEvent.new(DateTime.now(),
+                                     user,
+                                     request.user_agent,
+                                     request.ip,
+                                     :remove,
+                                     changed_tags)
+    he.save
 
     v = ServerTag::View.new("ajax_tags_by_host", :json)
     erb v.template_name, :locals => {:hosts => hosts, :new_tag_names => []}
