@@ -100,19 +100,9 @@ function unique(a) {
 function typeaheadItems() {
     var tags = [];
     $('table span.servertag-tag').each(function(){
-        tags.push($(this).attr('servertag-tagname') + ' ');
+        tags.push($(this).attr('servertag-tagname'));
     });
     return unique(tags);
-}
-
-// Determines whether the query that the user has typed matches an item.
-//
-// We only match the stuff after a ' ' so that the user can enter
-// multiple tags in the box.
-function typeaheadMatcher(item) {
-    var query_parts = this.query.split(' ');
-    var part = query_parts[query_parts.length - 1];
-    return (RegExp('^' + part, 'i').exec(item) !== null);
 }
 
 // Given a table cell (of the type .servertag-tag-cell), returns the
@@ -259,12 +249,9 @@ function openTagModal(selector) {
                 return false;
                 },
             select: function(event, ui) {
-                var terms = this.value.split(' ');
-                // remove the current input
+                var terms = this.value.split(/s+/);
                 terms.pop();
-                // add the selected item
-                terms.push( ui.item.value );
-                // add placeholder to get the space at the end
+                terms.push(ui.item.value);
                 terms.push('');
                 this.value = terms.join(' ');
                 return false;
