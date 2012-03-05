@@ -44,10 +44,10 @@ $(document).ready(function() {
     $('.servertag-dataTable th>input').change(function() {headerCheckboxChanged();});
     // Modals
     $('#add-tags-btn').click(function() {openTagModal('#add-tags-modal');});
-    $('#add-tags-submit').click(function() {addTagsModalSubmit();});
+    $('#add-tags-modal .servertag-submit-btn').click(function() {addTagsModalSubmit();});
     $('#add-tags-modal form').submit(function() {addTagsModalSubmit();});
     $('#remove-tags-btn').click(function() {openTagModal('#remove-tags-modal');});
-    $('#remove-tags-submit').click(function() {removeTagsModalSubmit();});
+    $('#remove-tags-modal .servertag-submit-btn').click(function() {removeTagsModalSubmit();});
     $('#remove-tags-modal form').submit(function() {removeTagsModalSubmit();});
     // Clicking on row
     $('tr.servertag-host-row').click(function() {toggleRowCheckbox($(this));});
