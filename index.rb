@@ -3,7 +3,6 @@ require 'json'
 
 require 'sinatra'
 
-require 'lib/action'
 require 'lib/models'
 require 'lib/db_handler'
 

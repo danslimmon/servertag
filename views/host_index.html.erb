@@ -1,11 +1,13 @@
 <%= erb "header.html".to_sym %>
 
-<!-- host_index -->
 <% hosts = locals[:hosts] %>
 <body>
+<%= erb "navbar.html".to_sym, :locals => {:active_page => :host_index} %>
+
+<!-- host_index ================================ -->
 <div class="container">
 <div class="content">
-    <h1>ServerTag</h1>
+    <header><h1>Host Index</h1></header>
     <br />
 <%
 if hosts.empty?
