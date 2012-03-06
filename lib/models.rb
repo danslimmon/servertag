@@ -179,12 +179,12 @@ module ServerTag
     # 'changed_tags' is a hash mapping each host name to the lists of tag namse that
     #   changed on that host.
     class HistoryEvent < Model
-        attr_accessor :datetime, :user, :user_agent, :remote_host, :diffs
+        attr_accessor :datetime, :user, :client, :remote_host, :diffs
 
-        def initialize(datetime, user, user_agent, remote_host, type, changed_tags)
+        def initialize(datetime, user, client, remote_host, type, changed_tags)
             @datetime = datetime.new_offset(0)
             @user = user
-            @user_agent = user_agent
+            @client = client
             @remote_host = remote_host
             @diffs = _generate_diffs(type, changed_tags)
 
@@ -208,8 +208,8 @@ module ServerTag
 
             diffs = []
             changed_by_tags.each_pair do |tagnames,hostnames|
-                diffs << {:add => "Added tag(s) %s to host %s",
-                          :remove => "Removed tag(s) %s from host %s"}[type] %
+                diffs << {:add => "Added tag(s) %s to host(s) %s",
+                          :remove => "Removed tag(s) %s from host(s) %s"}[type] %
                          [_pp_list(tagnames), _pp_list(hostnames)]
             end
             diffs
@@ -232,7 +232,7 @@ module ServerTag
         def to_db_hash
             {:datetime => @datetime.strftime("%FT%T"),
              :user => @user,
-             :user_agent => @user_agent,
+             :client => @client,
              :remote_host => @remote_host,
              :diffs => @diffs}
         end

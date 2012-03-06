@@ -32,21 +32,29 @@ module ServerTag
         end
         
         def template_name
-            "#{@base_name}.#{_data_type}".to_sym
+            "#{@base_name}.#{_template_infix}".to_sym
         end
 
-        def _data_type
-            if @accept.is_a?(Symbol)
-                return @accept.to_s
-            end
-
+        def content_type
             @accept.each do |type|
-                if %q{text/x-json application/json}.include?(type)
-                    return "json"
+                if %w{text/html text/x-json application/json}.include?(type)
+                    return type
                 end
             end
-            # Default is HTML
-            return "html"
+
+            # Default is HTML.
+            "text/html"
+        end
+
+        # Determines the type part of the template name from our content-type
+        #
+        # E.g. if content_type is "text/html", will return "html".
+        def _template_infix
+            infix_map = {"text/x-json" => "json",
+                         "application/json" => "json",
+                         "text/html" => "html"}
+            infix_map.default = "html"
+            return infix_map[content_type]
         end
     end
 
@@ -87,7 +95,7 @@ error ServerTag::HTTPError do
 end
 
 
-# Accessing by host
+######################## Host
 get '/host' do
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     hosts = handler.all
@@ -152,14 +160,12 @@ delete '/host/:hostname/:tagname' do |hostname,tagname|
 end
 
 
-# History
+############################# History
 get '/history' do
-    db = ServerTag::DatabaseConnectionFactory.get
-    rows = db.execute("SELECT datetime, user, remote_host, host, tag, action
-                       FROM history
-                       LIMIT :limit",
-                      lim)
-    he = ServerTag::History.new
+    # In HTML, this view gets its data from an AJAX call, so we don't
+    # need to pass any data to the template.
+    v = ServerTag::View.new("history", request.accept)
+    erb v.template_name
 end
 
 
@@ -207,14 +213,16 @@ post '/ajax/add_tags' do
 
     he = ServerTag::HistoryEvent.new(DateTime.now(),
                                      user,
-                                     request.user_agent,
+                                     "web",
                                      request.ip,
                                      :add,
                                      changed_tags)
     he.save
 
-    v = ServerTag::View.new("ajax_tags_by_host", :json)
-    erb v.template_name, :locals => {:hosts => hosts, :new_tag_names => tag_names}
+    v = ServerTag::View.new("ajax_tags_by_host", ["text/x-json"])
+    erb v.template_name, :content_type => v.content_type,
+        :locals => {:hosts => hosts, :new_tag_names => tag_names}
+    status 200
 end
 
 post '/ajax/remove_tags' do
@@ -253,12 +261,13 @@ post '/ajax/remove_tags' do
 
     he = ServerTag::HistoryEvent.new(DateTime.now(),
                                      user,
-                                     request.user_agent,
+                                     "web",
                                      request.ip,
                                      :remove,
                                      changed_tags)
     he.save
 
-    v = ServerTag::View.new("ajax_tags_by_host", :json)
-    erb v.template_name, :locals => {:hosts => hosts, :new_tag_names => []}
+    v = ServerTag::View.new("ajax_tags_by_host", ["text/x-json"])
+    erb v.template_name, :content_type => v.content_type
+    status 200
 end

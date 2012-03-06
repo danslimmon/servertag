@@ -75,7 +75,7 @@ module ServerTag
             he.es_id = es_hit.es_id
             he.datetime = es_hit.datetime
             he.user = es_hit.user
-            he.user_agent = es_hit.user_agent
+            he.client = es_hit.client
             he.remote_host = es_hit.remote_host
             he.message = es_hit.message
 
