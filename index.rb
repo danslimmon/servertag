@@ -220,9 +220,9 @@ post '/ajax/add_tags' do
     he.save
 
     v = ServerTag::View.new("ajax_tags_by_host", ["text/x-json"])
+    status 200
     erb v.template_name, :content_type => v.content_type,
         :locals => {:hosts => hosts, :new_tag_names => tag_names}
-    status 200
 end
 
 post '/ajax/remove_tags' do
@@ -268,6 +268,7 @@ post '/ajax/remove_tags' do
     he.save
 
     v = ServerTag::View.new("ajax_tags_by_host", ["text/x-json"])
-    erb v.template_name, :content_type => v.content_type
     status 200
+    erb v.template_name, :content_type => v.content_type,
+        :locals => {:hosts => hosts, :new_tag_names => []}
 end

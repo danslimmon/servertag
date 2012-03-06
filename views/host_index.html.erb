@@ -145,11 +145,11 @@ $(document).ready(function() {
     $('.servertag-dataTable th>input').change(function() {headerCheckboxChanged();});
     // Modals
     $('#add-tags-btn').click(function() {openTagModal('#add-tags-modal');});
-    $('#add-tags-modal .servertag-submit-btn').click(function() {addTagsModalSubmit();});
-    $('#add-tags-modal form').submit(function() {addTagsModalSubmit();});
+    $('#add-tags-modal .servertag-submit-btn').click(function() {addTagsModalSubmit(); return false;});
+    $('#add-tags-modal form').submit(function() {addTagsModalSubmit(); return false;});
     $('#remove-tags-btn').click(function() {openTagModal('#remove-tags-modal');});
-    $('#remove-tags-modal .servertag-submit-btn').click(function() {removeTagsModalSubmit();});
-    $('#remove-tags-modal form').submit(function() {removeTagsModalSubmit();});
+    $('#remove-tags-modal .servertag-submit-btn').click(function() {removeTagsModalSubmit(); return false;});
+    $('#remove-tags-modal form').submit(function() {removeTagsModalSubmit(); return false;});
     // Clicking on row
     $('tr.servertag-host-row').click(function() {toggleRowCheckbox($(this));});
     //     Make sure you can click the checkbox without bubbling up to the row
@@ -286,6 +286,7 @@ function addTagsToHosts(hosts, new_tags) {
     $.ajax({
         url: "ajax/add_tags",
         type: "POST",
+        cache: false,
         data: {hosts: hosts, tags: new_tags},
         dataType: "json"})
         .done(updateTagTable);
@@ -338,7 +339,6 @@ function openTagModal(selector) {
             }
         })
         .autocomplete({
-            source: typeaheadItems(),
             autoFocus: true,
             minLength: 0,
             source: function(request, response) {
