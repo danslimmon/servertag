@@ -116,24 +116,17 @@ $(document).ready(function() {
     // ************ dataTables
     // Styling
     $.fn.dataTableExt.oStdClasses.sFilter = "dataTables_filter pull-left";
-    // Allows us to disable pagination 
-    $.fn.dataTableExt.oPagination.none = {
-        fnInit: function(){},
-        fnUpdate: function() {
-            $('.dataTables_length').hide();
-            $('.dataTables_info').hide();
-            $('.dataTables_paginate').hide();
-        }
-    };
     // Initialize table
     $('.servertag-dataTable').dataTable({
         "bJQueryUI": false,
-        // Custom pagination type defined above
-        "sPaginationType": "none",
+        // Disable features we don't want
+        "bPaginate": false,
+        "bLengthChange": false,
+        "bInfo": false,
         // Override some text
         "oLanguage": {
             "sSearch": "",
-            "sZeroRecords": "No matches"
+            "sZeroRecords": "No matches."
         }
     });
     // More styling (needs to be done after table init)
