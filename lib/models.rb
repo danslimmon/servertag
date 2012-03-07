@@ -1,3 +1,5 @@
+require 'lib/db_handler'
+
 module ServerTag
     # Abstract for models.
     class Model
@@ -257,6 +259,8 @@ module ServerTag
         end
 
         def save
+            # Don't want to log a history event if nothing changed.
+            return nil if @diffs.empty?
             @_db_handler.index(self)
         end
     end
