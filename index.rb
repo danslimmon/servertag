@@ -108,10 +108,11 @@ end
 
 
 get '/host/:hostname' do |hostname|
-    host = ServerTag::Host.find_by_name(hostname)
+    handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
+    host = handler.by_name(hostname)
 
     v = ServerTag::View.new("host", request.accept)
-    erb v.template_name, :locals => {:hostname => host.name, :tags => host.tags}
+    erb v.template_name, :locals => {:host => host}
 end
 
 

@@ -1,8 +1,5 @@
 <%
-hostname = locals[:hostname]
-tags = locals[:tags]
+host = locals[:host]
 
-return_obj = {"name" => hostname,
-              "tags" => tags}
-%>
-<%= JSON.dump(return_obj) %>
+return_obj = {:hostname => host.name, :tags => host.tag_names}
+%><%= return_obj.to_json %>
