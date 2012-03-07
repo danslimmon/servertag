@@ -223,6 +223,7 @@ module ServerTag
             changed_by_host.each_pair do |hostname,tagnames|
                 changed_by_tags[tagnames] = changed_by_tags[tagnames] + [hostname]
             end
+            changed_by_tags.delete([])
 
             diffs = []
             changed_by_tags.each_pair do |tagnames,hostnames|
