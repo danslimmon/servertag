@@ -267,7 +267,7 @@ post '/ajax/remove_tags' do
                              user,
                              "web",
                              request.ip,
-                             :add,
+                             :remove,
                              changed_tags)
     he.save
 
