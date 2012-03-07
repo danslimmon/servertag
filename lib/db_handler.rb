@@ -1,5 +1,7 @@
 require 'rubberband'
 
+require 'lib/search_result'
+
 module ServerTag
     # Builds you a DBHandler for a given Model class.
     class DBHandlerFactory
@@ -68,19 +70,15 @@ module ServerTag
             ElasticSearch.new('127.0.0.1:9200', :index => "servertag", :type => "history_event")
         end
 
-        # Converts an ElasticSearch hit to a HistoryEvent instance.
-        def _convert_hit(es_hit)
-            he = HistoryEvent.new
-            he.populate_from_db!(es_hit)
-            he
-        end
-
         # Returns the most recent 'n' HistoryEvent instances in the DB.
         def most_recent(n)
-            hits = _client.search("*:*",
-                                  :sort => "datetime:desc",
-                                  :size => n).hits
-            hits.map {|hit|; _convert_hit(hit)}
+            es_hits = _client.search("*:*",
+                                     :sort => "datetime:desc",
+                                     :size => n)
+
+            sr = HistorySearchResult.new
+            sr.populate!(es_hits)
+            sr
         end
 
         # Indexes the given HistoryEvent instance.

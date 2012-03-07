@@ -280,10 +280,10 @@ end
 get '/ajax/history_table' do
     # Endpoint for dataTables jQuery plugin on the history page
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::HistoryEvent)
-    hes = handler.most_recent(10)
+    search_result = handler.most_recent(50)
 
     v = ServerTag::View.new("ajax_history", ["text/x-json"])
     status 200
     erb v.template_name, :content_type => v.content_type,
-        :locals => {:events => hes}
+        :locals => {:events => search_result.hits}
 end
