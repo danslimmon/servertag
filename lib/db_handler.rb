@@ -71,21 +71,14 @@ module ServerTag
         # Converts an ElasticSearch hit to a HistoryEvent instance.
         def _convert_hit(es_hit)
             he = HistoryEvent.new
-
-            he.es_id = es_hit.es_id
-            he.datetime = es_hit.datetime
-            he.user = es_hit.user
-            he.client = es_hit.client
-            he.remote_host = es_hit.remote_host
-            he.message = es_hit.message
-
+            he.populate_from_db!(es_hit)
             he
         end
 
         # Returns the most recent 'n' HistoryEvent instances in the DB.
         def most_recent(n)
             hits = _client.search("*:*",
-                                  :sort => {:datetime => {:order => :desc}},
+                                  :sort => "datetime:desc",
                                   :size => n).hits
             hits.map {|hit|; _convert_hit(hit)}
         end

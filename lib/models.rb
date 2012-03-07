@@ -181,15 +181,33 @@ module ServerTag
     class HistoryEvent < Model
         attr_accessor :datetime, :user, :client, :remote_host, :diffs
 
-        def initialize(datetime, user, client, remote_host, type, changed_tags)
+        def initialize
+            @_db_handler = DBHandlerFactory.handler_for(HistoryEvent)
+            super()
+        end
+        
+        # Populates the HistoryEvent instance with change data provided by the user.
+        #
+        # 'datetime' will be a Ruby DateTime instance, 'type' will be either :add or
+        # :remove, and 'changed_tags' will be the list of tags that were added or
+        # removed.
+        def populate_from_change!(datetime, user, client, remote_host, type, changed_tags)
             @datetime = datetime.new_offset(0)
             @user = user
             @client = client
             @remote_host = remote_host
             @diffs = _generate_diffs(type, changed_tags)
+        end
 
-            @_db_handler = DBHandlerFactory.handler_for(HistoryEvent)
-            super()
+        # Populates the HistoryEvent with data from our DB (an ElasticSearch hit instance)
+        def populate_from_db!(es_hit)
+            @datetime = DateTime.parse(es_hit.datetime)
+            @user = es_hit.user
+            @client = es_hit.client
+            @remote_host = es_hit.remote_host
+            @diffs = es_hit.diffs
+
+            @es_id = es_hit._id
         end
 
         # Generates message parts for the history event given the type of event and the changed tag

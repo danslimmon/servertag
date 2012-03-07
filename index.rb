@@ -211,12 +211,13 @@ post '/ajax/add_tags' do
         hosts << h
     end
 
-    he = ServerTag::HistoryEvent.new(DateTime.now(),
-                                     user,
-                                     "web",
-                                     request.ip,
-                                     :add,
-                                     changed_tags)
+    he = ServerTag::HistoryEvent.new
+    he.populate_from_change!(DateTime.now(),
+                             user,
+                             "web",
+                             request.ip,
+                             :add,
+                             changed_tags)
     he.save
 
     v = ServerTag::View.new("ajax_tags_by_host", ["text/x-json"])
@@ -259,16 +260,29 @@ post '/ajax/remove_tags' do
         hosts << h
     end
 
-    he = ServerTag::HistoryEvent.new(DateTime.now(),
-                                     user,
-                                     "web",
-                                     request.ip,
-                                     :remove,
-                                     changed_tags)
+    he = ServerTag::HistoryEvent.new
+    he.populate_from_change!(DateTime.now(),
+                             user,
+                             "web",
+                             request.ip,
+                             :add,
+                             changed_tags)
     he.save
 
     v = ServerTag::View.new("ajax_tags_by_host", ["text/x-json"])
     status 200
     erb v.template_name, :content_type => v.content_type,
         :locals => {:hosts => hosts, :new_tag_names => []}
+end
+
+get '/ajax/history_table' do
+    puts params.inspect
+    # Endpoint for dataTables jQuery plugin on the history page
+    handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::HistoryEvent)
+    hes = handler.most_recent(10)
+
+    v = ServerTag::View.new("ajax_history", ["text/x-json"])
+    status 200
+    erb v.template_name, :content_type => v.content_type,
+        :locals => {:events => hes}
 end

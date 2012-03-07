@@ -1,0 +1,57 @@
+<%= erb "header.html".to_sym %>
+
+<% hosts = locals[:hosts] %>
+<body>
+<%= erb "navbar.html".to_sym, :locals => {:active_page => :history} %>
+
+<!-- host_index ================================ -->
+<div class="container">
+<div class="content">
+    <header><h1>History</h1></header>
+    <br />
+
+    <table class="servertag-dataTable table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th class="span2">Time</th>
+                <th class="span2">User</th>
+                <th class="span2">Client</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+<script type="text/javascript" charset="utf-8">
+$(document).ready(function() {
+    // ************ dataTables
+    // Styling
+    $.fn.dataTableExt.oStdClasses.sFilter = "dataTables_filter pull-left";
+    // Initialize table
+    $('.servertag-dataTable').dataTable({
+        "bJQueryUI": false,
+        "bAutoWidth": false,
+        "bProcessing": true,
+        "bServerSide": true,
+        "sAjaxSource": "ajax/history_table",
+        // Disable features we don't want
+        "bLengthChange": false,
+        "bSort": false,
+        "bInfo": false,
+        // Configure pagination
+        "sPaginationType": "full_numbers",
+        // Override some text
+        "oLanguage": {
+            "sSearch": "",
+            "sZeroRecords": "<em>No matching history events.</em>"
+        }
+    });
+    // More styling (needs to be done after table init)
+    $('.dataTables_filter>input').attr('placeholder', 'Start typing to filter...');
+    $('.checkbox-cell').attr('style', 'width: 12px;');
+});
+    </script>
+</body>
+
+<%= erb "footer.html".to_sym %>

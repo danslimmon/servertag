@@ -1,0 +1,12 @@
+<%
+events = locals[:events]
+rslt = {
+    "iTotalRecords" => 999,
+    "iTotalDisplayRecords" => "20"
+}
+
+rslt["aaData"] = events.map do |event|
+    [event.datetime, event.user, event.client, event.diffs.inspect]
+end
+%>
+<%= rslt.to_json %>
