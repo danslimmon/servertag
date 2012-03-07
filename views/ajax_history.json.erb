@@ -6,7 +6,13 @@ rslt = {
 }
 
 rslt["aaData"] = events.map do |event|
-    [event.datetime, event.user, event.client, event.diffs.inspect]
+    diff_list = "<ul>" + event.diffs.reduce("") {|old,d|; old + "<li>#{d}</li>"} + "</ul>"
+    [
+        event.datetime.strftime("%Y %b %d<br />%H:%M:%S%Z"),
+        event.user,
+        event.client,
+        diff_list
+    ]
 end
 %>
 <%= rslt.to_json %>

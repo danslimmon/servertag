@@ -3,6 +3,8 @@ require 'json'
 
 require 'sinatra'
 
+# Add '.' to our lib search path
+$:.unshift(".")
 require 'lib/models'
 require 'lib/db_handler'
 
@@ -276,7 +278,6 @@ post '/ajax/remove_tags' do
 end
 
 get '/ajax/history_table' do
-    puts params.inspect
     # Endpoint for dataTables jQuery plugin on the history page
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::HistoryEvent)
     hes = handler.most_recent(10)
