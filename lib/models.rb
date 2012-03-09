@@ -70,16 +70,13 @@ module ServerTag
         end
 
         def remove_tags!(tags_to_remove)
-            # We convert to Tag instances to get the name normalization done
-            # before comparing
-            
-            rval = tag_names_to_remove.select {|tagname|; tag_names.include?(tagname)}
-            @tags.reject! {|tag|; tag_names_to_remove.include?(tag.name)}
+            rval = tags_to_remove.select {|tag|; @tags.include?(tag)}
+            @tags.reject! {|tag|; tags_to_remove.include?(tag)}
             return rval
         end
 
         def remove_tags_by_name!(tag_names_to_remove)
-            tags_to_remove = tag_names_to_remove.map {|tagname|; Tag.new(tagname).name}
+            tags_to_remove = tag_names_to_remove.map {|tagname|; Tag.new(tagname)}
             remove_tags!(tags_to_remove)
         end
 
@@ -145,18 +142,15 @@ module ServerTag
             end
         end
 
-        def <=>(other_tag)
-            @name <=> other_tag.name
-        end
+        # Allow sorting
+        def <=>(other_tag); @name <=> other_tag.name; end
 
-        # Must override this and #hash to get uniqueness checking
-        def eql?(other_tag)
-            @name == other_tag.name
-        end
+        # Must override these to get uniqueness checking
+        def eql?(other_tag); @name == other_tag.name; end
+        def hash; @name.hash; end
 
-        def hash
-            @name.hash
-        end
+        # Overriding this for Array#include?
+        def ==(other_tag); @name == other_tag.name; end
 
         def _normalize(tag_name)
             tag_name.downcase
@@ -198,13 +192,13 @@ module ServerTag
         #
         # 'datetime' will be a Ruby DateTime instance
         #
-        # 'change_info' will be a ChangeInfo object describing the change.
-        def populate_from_change!(datetime, user, client, remote_host, change_info)
+        # 'changelog' will be a ChangeLog object describing the change.
+        def populate_from_change!(datetime, user, client, remote_host, changelog)
             @datetime = datetime.new_offset(0)
             @user = user
             @client = client
             @remote_host = remote_host
-            @diffs = change_info.diffs
+            @diffs = changelog.diffs
         end
 
         # Populates the HistoryEvent with data from our DB (an ElasticSearch hit instance)

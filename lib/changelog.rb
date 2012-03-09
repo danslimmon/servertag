@@ -5,11 +5,11 @@ module ServerTag
     # you can call diffs() to return a list of strings that describes the
     # change, for insertion into the history DB. Synopsis:
     #
-    #   ci = ChangeInfo.new
+    #   ci = ChangeLog.new
     #   ci.create_host!(host)
     #   ci.add_tags!(host, tags)
     #   puts ci.diffs.join("\n")
-    class ChangeInfo
+    class ChangeLog
         def initialize
             # Lists of hostnames
             @_hosts_created = []

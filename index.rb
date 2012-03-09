@@ -8,7 +8,7 @@ $:.unshift(".")
 require 'lib/rest'
 require 'lib/models'
 require 'lib/db_handler'
-require 'lib/change_info'
+require 'lib/changelog'
 
 configure do
     set :show_exceptions, false
@@ -126,7 +126,7 @@ post '/host/:hostname/tags' do |hostname|
     input.required!(ServerTag::RESTTags.new)
     input.populate!(request.body)
 
-    changelog = ServerTag::ChangeInfo.new
+    changelog = ServerTag::ChangeLog.new
 
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     host = handler.by_name(hostname, :on_missing => :new)
@@ -205,12 +205,13 @@ post '/ajax/add_tags' do
     tag_names = params["tags"]
     hosts = []
 
-    changed_tags = {}
+    changelog = ServerTag::ChangeLog.new
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     host_names.each do |hostname|
         h = handler.by_name(hostname)
 
-        changed_tags[h.name] = h.add_tags_by_name!(tag_names)
+        added_tags = h.add_tags_by_name!(tag_names)
+        changelog.add_tags!(h, added_tags)
         h.save
 
         hosts << h
@@ -221,8 +222,7 @@ post '/ajax/add_tags' do
                              user,
                              "web",
                              request.ip,
-                             :add,
-                             changed_tags)
+                             changelog)
     he.save
 
     v = ServerTag::View.new("ajax_tags_by_host", ["text/x-json"])
@@ -254,12 +254,13 @@ post '/ajax/remove_tags' do
     tag_names = params["tags"]
     hosts = []
 
-    changed_tags = {}
+    changelog = ServerTag::ChangeLog.new
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     host_names.each do |hostname|
         h = handler.by_name(hostname)
 
-        changed_tags[h.name] = h.remove_tags_by_name!(tag_names)
+        removed_tags = h.remove_tags_by_name!(tag_names)
+        changelog.remove_tags!(h, removed_tags)
         h.save
 
         hosts << h
@@ -270,8 +271,7 @@ post '/ajax/remove_tags' do
                              user,
                              "web",
                              request.ip,
-                             :remove,
-                             changed_tags)
+                             changelog)
     he.save
 
     v = ServerTag::View.new("ajax_tags_by_host", ["text/x-json"])
