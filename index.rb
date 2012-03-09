@@ -5,8 +5,10 @@ require 'sinatra'
 
 # Add '.' to our lib search path
 $:.unshift(".")
+require 'lib/rest'
 require 'lib/models'
 require 'lib/db_handler'
+require 'lib/change_info'
 
 configure do
     set :show_exceptions, false
@@ -87,7 +89,7 @@ end
 
 # Routes
 #
-# Error routes
+######################## Error routes
 error ServerTag::HTTPError do
     error_model = env["sinatra.error"].model
 
@@ -98,6 +100,7 @@ end
 
 
 ######################## Host
+# Host index page
 get '/host' do
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     hosts = handler.all
@@ -107,6 +110,7 @@ get '/host' do
 end
 
 
+# REST entity
 get '/host/:hostname' do |hostname|
     handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
     host = handler.by_name(hostname)
@@ -115,29 +119,32 @@ get '/host/:hostname' do |hostname|
     erb v.template_name, :locals => {:host => host}
 end
 
+# REST: add tags to host
+post '/host/:hostname/tags' do |hostname|
+    input = ServerTag::RESTInput.new
+    input.required!(ServerTag::RESTClient.new)
+    input.required!(ServerTag::RESTTags.new)
+    input.populate!(request.body)
 
-post '/host/:hostname' do |hostname|
-    begin
-        post_obj = JSON.load(request.body)
-        raise unless post_obj.key?("tags")
-        raise unless post_obj["tags"].is_a?(Array)
-    rescue
-        raise ServerTag::HTTPBadRequestError,
-                "Malformed input: expected JSON hash with a 'tags' array."
-    end
+    changelog = ServerTag::ChangeInfo.new
 
-    begin
-        h = ServerTag::Host.find_by_name(hostname)
-    rescue ServerTag::HTTPNotFoundError,
-        h = ServerTag::Host.new
-        h.name = hostname
-        h.tags = []
-    end
+    handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
+    host = handler.by_name(hostname, :on_missing => :new)
+    # If the host has no tags yet, we just created it, so we need to log that.
+    changelog.create_host!(host) if host.tags.empty?
 
-    new_tag_names = post_obj["tags"]
-    h.add_tags!(new_tags)
-    h.save
+    new_tags = input.tags
+    added_tags = host.add_tags!(new_tags)
+    host.save
+    # Log the added tags
+    changelog.add_tags!(host, new_tags)
 
+    he = ServerTag::HistoryEvent.new
+    he.populate_from_change!(DateTime.now,
+                             user,
+                             input.client,
+                             request.ip,
+                             changelog)
     status 204
     body ""
 end
@@ -172,12 +179,7 @@ get '/history' do
 end
 
 
-# Home page
-get '/' do
-    erb "index.html".to_sym
-end
-
-# AJAX endpoints
+############################# AJAX endpoints
 post '/ajax/add_tags' do
     # Accepts a list of hosts and a list of tags; adds the tags to the hosts.
     #
@@ -208,7 +210,7 @@ post '/ajax/add_tags' do
     host_names.each do |hostname|
         h = handler.by_name(hostname)
 
-        changed_tags[h.name] = h.add_tags!(tag_names)
+        changed_tags[h.name] = h.add_tags_by_name!(tag_names)
         h.save
 
         hosts << h
@@ -257,7 +259,7 @@ post '/ajax/remove_tags' do
     host_names.each do |hostname|
         h = handler.by_name(hostname)
 
-        changed_tags[h.name] = h.remove_tags!(tag_names)
+        changed_tags[h.name] = h.remove_tags_by_name!(tag_names)
         h.save
 
         hosts << h

@@ -27,7 +27,7 @@ module ServerTag
         def _convert_hit(es_hit)
             h = Host.new
             h.name, h.es_id = es_hit.name, es_hit._id
-            h.set_tags!(es_hit.tags)
+            h.set_tags_by_name!(es_hit.tags)
 
             h
         end
@@ -39,11 +39,19 @@ module ServerTag
         end
 
         # Returns the first (and hopefully only) host with the given name.
-        def by_name(hostname)
+        def by_name(hostname, opts={})
             Host.assert_valid_hostname(hostname)
 
             hits = _client.search("name:#{hostname}").hits
-            raise HTTPNotFoundError.new("No such host: '#{hostname}'") if hits.empty?
+            if hits.empty?
+                if opts[:on_missing] == :new
+                    h = Host.new
+                    h.name = hostname
+                    return h
+                else
+                    raise HTTPNotFoundError.new("No such host: '#{hostname}'") if hits.empty?
+                end
+            end
             
             _convert_hit(hits[0])
         end
