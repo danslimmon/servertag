@@ -33,20 +33,20 @@ module ServerTag
         end
 
         # Logs the addition of tags to a host.
-        def add_tags!(host, tag_names)
+        def add_tags!(host, tags)
             if @_tags_added.key?([host.name])
-                @_tags_added[host.name] += tag_names
+                @_tags_added[host.name] += tags.map {|tag|; tag.name}
             else
-                @_tags_added[host.name] = tag_names
+                @_tags_added[host.name] = tags.map {|tag|; tag.name}
             end
         end
 
         # Logs the removal of tags from a host.
-        def remove_tags!(host, tag_names)
+        def remove_tags!(host, tags)
             if @_tags_removed.key?([host.name])
-                @_tags_removed[host.name] += tag_names
+                @_tags_removed[host.name] += tags.map {|tag|; tag.name}
             else
-                @_tags_removed[host.name] = tag_names
+                @_tags_removed[host.name] = tags.map {|tag|; tag.name}
             end
         end
 

@@ -301,16 +301,29 @@ function removeTagsFromHosts(hosts, tags) {
 // Receives the data that was returned from the server.
 function updateTagTable(data) {
     $(data.results).each(function(){
-        var cell = $('.servertag-host-row[servertag-hostname="' + this.hostname + '"]>.servertag-tag-cell')
-            .empty();
-
-        $(this.tags)
-            .each(function(){
-                tagToSpan(this)
-                    .appendTo(cell);
-                cell.append(' ');
-                });
+        if (this.tags.length == 0) {
+            removeHostRow(this.hostname);
+        } else {
+            replaceHostTags(this.hostname, this.tags);
+        }
     });
+}
+
+// Replaces the tags in the given hostname's cell with the ones provided.
+function replaceHostTags(hostname, tags) {
+    var cell = $('.servertag-host-row[servertag-hostname="' + hostname + '"]>.servertag-tag-cell')
+        .empty();
+
+    $(tags)
+        .each(function(){
+            tagToSpan(this)
+                .appendTo(cell);
+            cell.append(' ');
+            });
+}
+
+function removeHostRow(hostname) {
+    $('.servertag-host-row[servertag-hostname="' + hostname + '"]').hide();
 }
 
 // Called on a click of the "Add" or "Remove Tags" button. Opens the modal.

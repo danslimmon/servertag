@@ -59,25 +59,36 @@ module ServerTag
                 current_tag.exclusive and new_prefixes.include?(current_tag.prefix)
             end
 
-            rval = (new_tags - @tags).map {|t|; t.name}
+            rval = new_tags - @tags
             @tags = (@tags + new_tags).uniq
             return rval
         end
 
+        # Adds the named tags to the host.
+        #
+        # Returns the list of Tag instances that were added (and not the ones
+        # that were already there)
         def add_tags_by_name!(tag_names)
             tags = tag_names.map {|tag_name|; Tag.new(tag_name)}
-            add_tags!(tags)
+            return add_tags!(tags)
         end
 
+        # Removes the given Tag instances from the Host. Returns the list of Tags that were added.
+        #
+        # (The return value doesn't contain any tags that were already present)
         def remove_tags!(tags_to_remove)
             rval = tags_to_remove.select {|tag|; @tags.include?(tag)}
             @tags.reject! {|tag|; tags_to_remove.include?(tag)}
             return rval
         end
 
+        # Removes the named tags from the host.
+        #
+        # Returns the list of Tag instances that were removed (and not the ones
+        # that weren't there in the first place)
         def remove_tags_by_name!(tag_names_to_remove)
             tags_to_remove = tag_names_to_remove.map {|tagname|; Tag.new(tagname)}
-            remove_tags!(tags_to_remove)
+            return remove_tags!(tags_to_remove)
         end
 
         def name
