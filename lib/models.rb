@@ -108,11 +108,12 @@ module ServerTag
              :tags => tag_names}
         end
 
+        # Saves the Host instance to the DB.
         def save
             _assert_savable
 
             if @_removed
-                @_db_handler.delete(self)
+                @_db_handler.remove(self)
             else
                 @_db_handler.index(self)
             end

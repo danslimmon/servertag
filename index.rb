@@ -150,6 +150,7 @@ post '/host/:hostname/tags' do |hostname|
 end
 
 
+# REST: delete host
 delete '/host/:hostname' do |hostname|
     h = ServerTag::Host.find_by_name(hostname)
     h.remove!
@@ -261,6 +262,11 @@ post '/ajax/remove_tags' do
 
         removed_tags = h.remove_tags_by_name!(tag_names)
         changelog.remove_tags!(h, removed_tags)
+        if h.tags.empty?
+            # If all tags are gone, then remove the host.
+            changelog.delete_host!(h)
+            h.remove!
+        end
         h.save
 
         hosts << h
