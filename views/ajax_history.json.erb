@@ -9,7 +9,7 @@ rslt["aaData"] = events.map do |event|
     diff_list = "<ul>" + event.diffs.reduce("") {|old,d|; old + "<li>#{d}</li>"} + "</ul>"
     [
         event.datetime.strftime("%b %d %Y<br />%H:%M:%S%Z"),
-        event.user,
+        event.user + "<br />" + event.remote_host,
         event.client,
         diff_list
     ]
