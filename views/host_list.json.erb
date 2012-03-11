@@ -1,0 +1,8 @@
+<%
+hosts = locals[:hosts]
+
+return_obj = {}
+return_obj[:result] = hosts.map do |host|
+    host.to_rest_hash
+end
+%><%= return_obj.to_json %>

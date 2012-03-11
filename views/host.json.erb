@@ -1,5 +1,1 @@
-<%
-host = locals[:host]
-
-return_obj = {:hostname => host.name, :tags => host.tag_names}
-%><%= return_obj.to_json %>
+<%= locals[:host].to_rest_hash.to_json %>

@@ -110,13 +110,20 @@ module ServerTag
             }
         end
 
-        def remove!
-            @_removed = true
+        def to_rest_hash
+            {
+                :hostname => @name,
+                :tags => tag_names
+            }
         end
 
         def to_db_hash
             {:name => @name,
              :tags => tag_names}
+        end
+
+        def remove!
+            @_removed = true
         end
 
         # Saves the Host instance to the DB.

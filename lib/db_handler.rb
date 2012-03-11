@@ -3,6 +3,10 @@ require 'rubberband'
 require 'lib/search_result'
 
 module ServerTag
+    def escape_for_search(s)
+        s.gsub(":", "\\:")
+    end
+
     # Builds you a DBHandler for a given Model class.
     class DBHandlerFactory
         def self.handler_for(model_cls)
@@ -42,7 +46,7 @@ module ServerTag
         def by_name(hostname, opts={})
             Host.assert_valid_hostname(hostname)
 
-            hits = _client.search("name:#{hostname}").hits
+            hits = _client.search("name:#{escape_for_search(hostname)}").hits
             if hits.empty?
                 if opts[:on_missing] == :new
                     h = Host.new
@@ -56,9 +60,16 @@ module ServerTag
             _convert_hit(hits[0])
         end
 
-        # Returns all hosts that have the given tag.
-        def by_tag(tag)
-            hits = _client.search("tags:#{tag.name}").hits
+        # Returns all hosts that have the given tags.
+        #
+        # Accepts a list of Tag instances. Returns a list of Host instances.
+        def by_tags(tags)
+            # Generate a search string like "tags:foo AND tags:bar"
+            search_parts = tags.map do |tag|
+                "tags:#{escape_for_search(tag.name)}"
+            end
+            search = search_parts.join(" AND ")
+            hits = _client.search(search).hits
             hits.map {|h|; _convert_hit(h)}
         end
 
