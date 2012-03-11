@@ -177,9 +177,26 @@ end
 
 # REST: delete tag from host
 delete '/host/:hostname/tags/:tagname' do |hostname,tagname|
-    h = ServerTag::Host.find_by_name(hostname)
-    h.tags.reject! {|tag|; tag == tagname.downcase}
-    h.save
+    handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
+    host = handler.by_name(hostname)
+
+    changelog = ServerTag::ChangeLog.new
+    removed_tags = host.remove_tags_by_name!(tagname)
+    changelog.remove_tags!(host, removed_tags)
+    if host.tags.empty?
+        # If all tags are gone, then remove the host.
+        changelog.delete_host!(host)
+        host.remove!
+    end
+    host.save
+
+    he = ServerTag::HistoryEvent.new
+    he.populate_from_change!(DateTime.now(),
+                             user,
+                             "rest",
+                             request.ip,
+                             changelog)
+    he.save
 
     status 204
     body ""
