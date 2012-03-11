@@ -122,7 +122,6 @@ end
 # REST: add tags to host
 post '/host/:hostname/tags' do |hostname|
     input = ServerTag::RESTInput.new
-    input.required!(ServerTag::RESTClient.new)
     input.required!(ServerTag::RESTTags.new)
     input.populate!(request.body)
 
@@ -137,14 +136,16 @@ post '/host/:hostname/tags' do |hostname|
     added_tags = host.add_tags!(new_tags)
     host.save
     # Log the added tags
-    changelog.add_tags!(host, new_tags)
+    changelog.add_tags!(host, added_tags)
 
     he = ServerTag::HistoryEvent.new
     he.populate_from_change!(DateTime.now,
                              user,
-                             input.client,
+                             "rest",
                              request.ip,
                              changelog)
+    he.save
+
     status 204
     body ""
 end
@@ -152,16 +153,30 @@ end
 
 # REST: delete host
 delete '/host/:hostname' do |hostname|
-    h = ServerTag::Host.find_by_name(hostname)
-    h.remove!
-    h.save
+    handler = ServerTag::DBHandlerFactory.handler_for(ServerTag::Host)
+    host = handler.by_name(hostname)
+
+    changelog = ServerTag::ChangeLog.new
+    changelog.remove_tags!(host, host.tags)
+    host.remove!
+    changelog.delete_host!(host)
+    host.save
+
+    he = ServerTag::HistoryEvent.new
+    he.populate_from_change!(DateTime.now(),
+                             user,
+                             "rest",
+                             request.ip,
+                             changelog)
+    he.save
 
     status 204
     body ""
 end
 
 
-delete '/host/:hostname/:tagname' do |hostname,tagname|
+# REST: delete tag from host
+delete '/host/:hostname/tags/:tagname' do |hostname,tagname|
     h = ServerTag::Host.find_by_name(hostname)
     h.tags.reject! {|tag|; tag == tagname.downcase}
     h.save

@@ -58,10 +58,12 @@ module ServerTag
             end
             rslt += _tag_diffs(:add, @_tags_added)
 
+            rslt += _tag_diffs(:remove, @_tags_removed)
             @_hosts_deleted.each do |host|
                 rslt << "Deleted host '#{host}'"
             end
-            rslt += _tag_diffs(:remove, @_tags_removed)
+
+            rslt
         end
 
         # Generates diff strings given the type of action and the changed tag names.
