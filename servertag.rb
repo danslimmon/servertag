@@ -101,8 +101,7 @@ end
 
 
 ######################## Host
-# Host index page
-get '/host' do
+get '/' do
     handler = DBHandlerFactory.handler_for(Host)
     hosts = handler.all
 
@@ -111,7 +110,7 @@ get '/host' do
 end
 
 
-# REST entity
+# REST
 get '/host/:hostname' do |hostname|
     handler = DBHandlerFactory.handler_for(Host)
     host = handler.by_name(hostname)
@@ -203,15 +202,15 @@ delete '/host/:hostname/tags/:tagname' do |hostname,tagname|
     body ""
 end
 
-# REST: Search by tags
-get '/search' do
-    if params["tags"].nil? or params["tags"].empty?
-        raise HTTPBadRequestError, "No tags provided to search on"
-    end
-    tags = params["tags"].split(",").map {|tagname|; Tag.new(tagname)}
-
+# REST: Return all hosts or search by tags
+get '/host' do
     handler = DBHandlerFactory.handler_for(Host)
-    hosts = handler.by_tags(tags)
+    if params["tags"].nil? or params["tags"].empty?
+        hosts = handler.all
+    else
+        tags = params["tags"].split(",").map {|tagname|; Tag.new(tagname)}
+        hosts = handler.by_tags(tags)
+    end
 
     v = View.new("host_list", request.accept)
     erb v.template_name, :locals => {:hosts => hosts}
