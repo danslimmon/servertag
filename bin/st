@@ -33,7 +33,7 @@ class RESTRequest
             "POST" => Net::HTTP::Post,
             "PUT" => Net::HTTP::Put,
             "DELETE" => Net::HTTP::Delete
-        }[@_method].new(URI(@_url).path)
+        }[@_method].new(URI(@_url).request_uri)
 
         r["Accept"] = "text/x-json"
         r.basic_auth(@_creds.username, @_creds.password) if @_creds.present?
@@ -160,9 +160,22 @@ end
 class ListAction
     attr_accessor :tags
 
+    def _query_string
+        @tags.empty? ? "" : "tags=#{@tags.join(",")}"
+    end
+
     def assert_valid
         true
     end
+
+    def execute(opts)
+        req = RESTRequest.new(opts, "GET", "/host", _query_string())
+        resp = req.run
+
+        ResultFactory.build_result(opts, self, resp)
+    end
+
+    def result_cls; ListResult; end
 end
 
 class ShowAction
@@ -179,9 +192,7 @@ class ShowAction
         ResultFactory.build_result(opts, self, resp)
     end
 
-    def result_cls
-        ShowResult
-    end
+    def result_cls; ShowResult; end
 end
 
 class EditAction
@@ -260,11 +271,38 @@ class ErrorResult < ActionResult
     end
 end
 
+# The result of a ListAction
+class ListResult < ActionResult
+    def populate_from_response!(response)
+        @output = _format_output(response.body)
+        @exit_code = 0
+    end
+
+    # Formats a given JSON object however we're supposed to
+    def _format_output(response_body)
+        if @_opts.json
+            return JSON.pretty_generate(response_body)
+        else
+            return _format_as_text(response_body)
+        end
+    end
+
+    # Formats the given JSON object as just nice-looking text
+    def _format_as_text(response_body)
+        s = "Hosts"
+        s += " with tag(s) #{@_action.tags.join(", ")}" unless @_action.tags.empty?
+        s += ":\n    "
+        s += response_body["result"].map {|host|; host["hostname"]}.join("\n    ")
+
+        s
+    end
+end
+
 # The result of a ShowAction
 class ShowResult < ActionResult
     def populate_from_response!(response)
         @output = _format_output(response.body)
-        @exit_code = (response.status.to_s =~ /^2/)
+        @exit_code = 0
     end
 
     # Formats a given JSON object however we're supposed to
@@ -360,6 +398,8 @@ begin
         opts.action = DeleteAction.new
         opts.action.hostname = args.shift
         raise unless args.empty?
+    elsif args[0] == "help"
+        barf_usage
     end
 rescue
     barf_usage
