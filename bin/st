@@ -1,0 +1,380 @@
+#!/usr/bin/ruby
+
+require 'net/http'
+require 'net/https'
+
+require 'rubygems'
+require 'json'
+
+class RESTRequest
+    def initialize(opts, method, path, qs="")
+        @_method = method.upcase
+        @_url = _clean_url(opts.server_url, path, qs)
+        @_creds = opts.creds
+    end
+
+    def _clean_url(base, path, qs)
+        # Remove leading/trailing slashes before joining
+        base = base.sub(/\/*$/, "")
+        path = path.sub(/^\/*/, "")
+        # Remove leading/trailing question marks
+        path = path.sub(/\?*$/, "")
+        qs = qs.sub(/^\?*/, "")
+
+        url = [base, path].join("/")
+        url = [url, qs].join("?") unless qs.empty?
+        url
+    end
+
+    # Returns a Net::HTTP request object
+    def _req
+        r = {
+            "GET" => Net::HTTP::Get,
+            "POST" => Net::HTTP::Post,
+            "PUT" => Net::HTTP::Put,
+            "DELETE" => Net::HTTP::Delete
+        }[@_method].new(URI(@_url).path)
+
+        r["Accept"] = "text/x-json"
+        r.basic_auth(@_creds.username, @_creds.password) if @_creds.present?
+        r
+    end
+
+    # Makes the request and returns a RESTResponse instance
+    def run
+        resp = nil
+        http = Net::HTTP.new(URI(@_url).host, URI(@_url).port)
+        http.use_ssl = (URI(@_url).scheme == "https")
+        http.start do |conn|
+            resp = conn.request(_req)
+        end
+
+        RESTResponse.new(resp)
+    end
+end
+
+class RESTResponse
+    attr_accessor :body, :status
+
+    # Initializes the instance given a Net:HTTP response object
+    def initialize(http_response)
+        begin
+            @body = JSON.load(http_response.body)
+        rescue
+            raise "Server returned invalid response:\n\n#{http_response.body}"
+        end
+
+        @status = http_response.code.to_i
+    end
+end
+
+class HTTPCredentials
+    attr_accessor :username, :password
+
+    # Parses the given credentials file and populates the instance from it
+    def parse_file!(path)
+        f = open(path)
+        lines = f.readlines()
+        unless lines.count == 2
+            raise "Credentials file must be 2 lines: username on one, password on the other"
+        end
+
+        @username, @password = lines.map {|line|; line.rstrip}
+    end
+
+    def present?; true; end
+end
+
+# Imitates HTTPCredentials but indicates there are no credentials given
+class NoHTTPCredentials
+    def present?; false; end
+end
+
+class Options
+    attr_accessor :json, :server_url, :creds, :action
+
+    def initialize
+        @json = false
+        @server_url = nil
+        @action = nil
+    end
+
+    def _creds_path
+        File.join(ENV["HOME"], ".servertag", "creds")
+    end
+
+    def _wrong_mode_message(path)
+        "Credentials file at '#{path}' must be readable, writable, and executable only to you."
+    end
+
+    # Returns the paths to search for config files, by increasing specificity.
+    def _config_paths
+        [
+            File.join("etc", "servertag", "client"),
+            File.join(ENV["HOME"], ".servertag", "client")
+        ]
+    end
+
+    def assert_valid
+        raise "No server URL provided" if @server_url.nil?
+        raise "No action specified" if @action.nil?
+        true
+    end
+
+    # Sets @creds to an HTTPCredentials instance based on the user's creds file.
+    #
+    # Sets a NoHTTPCredentials instance if the creds file is missing. Raises
+    # an exception if the creds file is present but doesn't have acceptable
+    # permissions.
+    def parse_creds!
+        path = _creds_path()
+        unless File.exist?(path)
+            @creds = NoHTTPCredentials.new 
+        end
+        raise _wrong_mode_message(path) unless (File.stat(path).mode % 64 == 0)
+
+        @creds = HTTPCredentials.new
+        @creds.parse_file!(path)
+    end
+
+    # Parses any config files and sets instance attributes accordingly.
+    def parse_config!
+        paths = _config_paths()
+        config = {}
+        paths.each do |path|
+            if File.readable?(path)
+                config.merge!(JSON.load(open(path).read))
+            end
+        end
+        
+        if config.key?("server_url")
+            @server_url = config["server_url"]
+        end
+
+        parse_creds!
+
+        nil
+    end
+end
+
+class ListAction
+    attr_accessor :tags
+
+    def assert_valid
+        true
+    end
+end
+
+class ShowAction
+    attr_accessor :hostname
+
+    def assert_valid
+        raise "No hostname provided" if (hostname.nil? or hostname.empty?)
+    end
+
+    def execute(opts)
+        req = RESTRequest.new(opts, "GET", "/host/#{@hostname}")
+        resp = req.run
+
+        ResultFactory.build_result(opts, self, resp)
+    end
+
+    def result_cls
+        ShowResult
+    end
+end
+
+class EditAction
+    attr_accessor :hostname, :operation, :tags
+
+    def assert_valid
+        raise "No hostname provided" if (hostname.nil? or hostname.empty?)
+        raise "Invalid operation '#{operation}'" unless (["add", "remove"].include?(operation))
+        raise "No tags provided" if (tags.nil? or tags.empty?)
+    end
+end
+
+class DeleteAction
+    attr_accessor :hostname
+
+    def assert_valid
+        raise "No hostname provided" if (hostname.nil? or hostname.empty?)
+    end
+end
+
+class ResultFactory
+    def initialize; raise NotImplementedError; end
+
+    # Builds an ActionResult-like object based on an Options, an Action, and a RESTResponse
+    def self.build_result(opts, action, response)
+        status_str = response.status.to_s
+        if status_str =~ /^2/
+            return normal_result(opts, action, response)
+        elsif status_str =~ /^(4|5)/
+            return error_result(opts, action, response)
+        end
+    end
+
+    def self.normal_result(opts, action, response)
+        rslt = action.result_cls.new(opts, action)
+        rslt.populate_from_response!(response)
+        rslt
+    end
+
+    def self.error_result(opts, action, response)
+        rslt = ErrorResult.new(opts, action)
+        rslt.populate_from_response!(response)
+        rslt
+    end
+end
+
+class ActionResult
+    attr_accessor :output, :exit_code
+
+    # Initializes the instance, given an Options instance.
+    def initialize(opts, action)
+        @_opts = opts.dup
+        @_action = action.dup
+
+        @output = nil
+        @exit_code = nil
+    end
+
+    # Populates the ActionResult instance from a RESTResponse object.
+    def populate_from_response!(response)
+        raise NotImplementedError
+    end
+end
+
+class ErrorResult < ActionResult
+    def populate_from_response!(response)
+        @output = _format_output(response.body)
+        @exit_code = 1
+    end
+
+    def _format_output(response_body)
+        s = "Server produced a %d error:\n\n%s" % [
+            response_body["status"],
+            response_body["message"]
+        ]
+    end
+end
+
+# The result of a ShowAction
+class ShowResult < ActionResult
+    def populate_from_response!(response)
+        @output = _format_output(response.body)
+        @exit_code = (response.status.to_s =~ /^2/)
+    end
+
+    # Formats a given JSON object however we're supposed to
+    def _format_output(response_body)
+        if @_opts.json
+            return JSON.pretty_generate(response_body)
+        else
+            return _format_as_text(response_body)
+        end
+    end
+
+    # Formats the given JSON object as just nice-looking text
+    def _format_as_text(response_body)
+        s = <<EOF
+Tags for host '#{@_action.hostname}':
+    #{response_body["tags"].sort.join("\n    ")}
+EOF
+        return s
+    end
+end
+
+
+def barf_usage
+    puts <<EOF
+st: ServerTag command line client
+
+CONFIGURATION:
+    You may put a config file in /etc/servertag/client or ~/.servertag/client.
+    It should be a JSON file and may specify the server URL like so:
+
+        {"server_url": "https://servertag.example.com"}
+
+    Additionally, if the server requires HTTP authentication, you must have a
+    credentials file in ~/.servertag/creds that lists your username on one line
+    and your password on the other. It must be readable and writable only to
+    you.
+
+USAGE:
+    st [--json] [--server URL] COMMANDS
+        --json: Output JSON instead of regular text
+        --server: Specifies the server URL to use (overrides any config files)
+
+    st help
+        Prints this usage message.
+
+    st list [TAG1 [TAG2 ...]]
+        Lists hosts. If TAGs are provided, the output is limited to
+        hosts with those tags.
+
+    st show HOSTNAME
+        Show the tags for the given host.
+
+    st edit HOSTNAME {add|remove} TAG1 [TAG2 ...]
+        Adds or removes the given tag(s) to/from the given host
+
+    st delete HOSTNAME
+        Deletes the given host.
+EOF
+    exit 1
+end
+
+
+opts = Options.new
+args = ARGV.dup
+begin
+    if args.include?("--json")
+        args.delete("--json")
+        opts.json = true
+    end
+    if args.include?("--server")
+        ind = args.index("--server")
+        args.delete_at(ind)
+        opts.server_url = args.delete_at(ind)
+    end
+
+    if args[0] == "list"
+        args.shift
+        opts.action = ListAction.new
+        opts.action.tags = args.dup
+    elsif args[0] == "show"
+        args.shift
+        opts.action = ShowAction.new
+        opts.action.hostname = args.shift
+        raise unless args.empty?
+    elsif args[0] == "edit"
+        args.shift
+        opts.action = EditAction.new
+        opts.action.hostname = args.shift
+        opts.action.operation = args.shift
+        opts.action.tags = args.dup
+    elsif args[0] == "delete"
+        args.shift
+        opts.action = DeleteAction.new
+        opts.action.hostname = args.shift
+        raise unless args.empty?
+    end
+rescue
+    barf_usage
+end
+
+begin
+    opts.parse_config!
+    opts.assert_valid
+rescue
+    puts "Error: #{$!}"
+    puts
+    puts "Try 'st help'."
+    exit 1
+end
+
+result = opts.action.execute(opts.dup)
+puts result.output
+exit result.exit_code
