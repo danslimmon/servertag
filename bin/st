@@ -7,10 +7,11 @@ require 'rubygems'
 require 'json'
 
 class RESTRequest
-    def initialize(opts, method, path, qs="")
+    def initialize(opts, method, path, qs="", body=nil)
         @_method = method.upcase
         @_url = _clean_url(opts.server_url, path, qs)
         @_creds = opts.creds
+        @_body = body
     end
 
     def _clean_url(base, path, qs)
@@ -37,6 +38,11 @@ class RESTRequest
 
         r["Accept"] = "text/x-json"
         r.basic_auth(@_creds.username, @_creds.password) if @_creds.present?
+        unless @_body.nil?
+            r["Content-Type"] = "text/x-json"
+            r.body = @_body
+        end
+
         r
     end
 
@@ -65,6 +71,29 @@ class RESTResponse
         end
 
         @status = http_response.code.to_i
+    end
+end
+
+class CompositeRESTResponse
+    attr_accessor :responses
+
+    # Initializes the instance given a Net:HTTP response object
+    def initialize(rest_responses)
+        @responses = rest_responses.dup
+    end
+
+    def status
+        if @responses.any? {|resp|; resp.status.to_s =~ /^2/}
+            return 200
+        end
+        @responses.map {|resp|; resp.status}.max
+    end
+
+    def body
+        {
+            :status => status,
+            :message => "All requests resulted in server errors:\n    #{@responses.map {|resp|; resp.body["message"]}.join("\n    ")}"
+        }
     end
 end
 
@@ -118,6 +147,7 @@ class Options
     def assert_valid
         raise "No server URL provided" if @server_url.nil?
         raise "No action specified" if @action.nil?
+        @action.assert_valid
         true
     end
 
@@ -195,14 +225,51 @@ class ShowAction
     def result_cls; ShowResult; end
 end
 
-class EditAction
-    attr_accessor :hostname, :operation, :tags
+class AddTagsAction
+    attr_accessor :hostname, :tags
+
+    # Returns the request body with which we should make the RESTRequest
+    def _req_body
+        JSON.dump({"tags" => tags})
+    end
 
     def assert_valid
         raise "No hostname provided" if (hostname.nil? or hostname.empty?)
-        raise "Invalid operation '#{operation}'" unless (["add", "remove"].include?(operation))
         raise "No tags provided" if (tags.nil? or tags.empty?)
     end
+
+    def execute(opts)
+        req = RESTRequest.new(opts, "POST", "/host/#{@hostname}/tags", "", _req_body())
+        resp = req.run
+
+        ResultFactory.build_result(opts, self, resp)
+    end
+
+    def result_cls; AddTagsResult; end
+end
+
+class RemoveTagsAction
+    attr_accessor :hostname, :tags
+
+    def assert_valid
+        raise "No hostname provided" if (hostname.nil? or hostname.empty?)
+        raise "No tags provided" if (tags.nil? or tags.empty?)
+    end
+
+    def execute(opts)
+        responses = []
+        @tags.each do |tag|
+            req = RESTRequest.new(opts, "DELETE", "/host/#{@hostname}/tags/#{tag}")
+            resp = req.run
+
+            responses << resp
+        end
+
+        rslt = ResultFactory.build_result(opts, self, CompositeRESTResponse.new(responses))
+        rslt
+    end
+
+    def result_cls; RemoveTagsResult; end
 end
 
 class DeleteAction
@@ -265,8 +332,8 @@ class ErrorResult < ActionResult
 
     def _format_output(response_body)
         s = "Server produced a %d error:\n\n%s" % [
-            response_body["status"],
-            response_body["message"]
+            response_body[:status],
+            response_body[:message]
         ]
     end
 end
@@ -324,6 +391,50 @@ EOF
     end
 end
 
+# The result of a EditAction
+class AddTagsResult < ActionResult
+    def populate_from_response!(response)
+        @output = _format_output(response)
+        @exit_code = 0
+    end
+
+    # Formats a given JSON object however we're supposed to
+    def _format_output(response)
+        if @_opts.json
+            return ""
+        else
+            return _format_as_text(response)
+        end
+    end
+
+    # Formats the given JSON object as just nice-looking text
+    def _format_as_text(response_body)
+        "Added tag(s) #{@_action.tags.join(", ")} to host '#{@_action.hostname}'"
+    end
+end
+
+class RemoveTagsResult < ActionResult
+    def populate_from_response!(response)
+        @output = _format_output(response)
+        @exit_code = 0
+    end
+
+    def _format_output(response)
+        lines = []
+        @_action.tags.each_with_index do |tag, i|
+            lines << _format_one(response.responses[i], tag)
+        end
+        lines.join("\n")
+    end
+
+    def _format_one(resp, tag)
+        if resp.status.to_s =~ /^2/
+            return "Removed tag #{tag} from host '#{@_action.hostname}'"
+        else
+            return "Failed removing tag #{tag} from host '#{@_action.hostname}'. Server returned status #{resp.status}:\n    #{resp.body["message"]}"
+        end
+    end
+end
 
 def barf_usage
     puts <<EOF
@@ -389,9 +500,14 @@ begin
         raise unless args.empty?
     elsif args[0] == "edit"
         args.shift
-        opts.action = EditAction.new
-        opts.action.hostname = args.shift
-        opts.action.operation = args.shift
+        hostname = args.shift
+        operation = args.shift
+        if operation == "add"
+            opts.action = AddTagsAction.new
+        elsif operation == "remove"
+            opts.action = RemoveTagsAction.new
+        end
+        opts.action.hostname = hostname
         opts.action.tags = args.dup
     elsif args[0] == "delete"
         args.shift
