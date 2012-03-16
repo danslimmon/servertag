@@ -91,8 +91,8 @@ class CompositeRESTResponse
 
     def body
         {
-            :status => status,
-            :message => "All requests resulted in server errors:\n    #{@responses.map {|resp|; resp.body["message"]}.join("\n    ")}"
+            "status" => status,
+            "message" => "All requests resulted in server errors:\n    #{@responses.map {|resp|; resp.body["message"]}.join("\n    ")}"
         }
     end
 end
@@ -332,8 +332,8 @@ class ErrorResult < ActionResult
 
     def _format_output(response_body)
         s = "Server produced a %d error:\n\n%s" % [
-            response_body[:status],
-            response_body[:message]
+            response_body["status"],
+            response_body["message"]
         ]
     end
 end
