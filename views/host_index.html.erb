@@ -1,9 +1,5 @@
-<%= erb "header.html".to_sym %>
-
 <% hosts = locals[:hosts] %>
 <body>
-<%= erb "navbar.html".to_sym, :locals => {:active_page => :host_index} %>
-
 <!-- host_index ================================ -->
 <div class="container">
 <div class="content">
@@ -399,5 +395,3 @@ function removeTagsModalSubmit() {
 }
 </script>
 </body>
-
-<%= erb "footer.html".to_sym %>

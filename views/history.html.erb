@@ -1,9 +1,5 @@
-<%= erb "header.html".to_sym %>
-
 <% hosts = locals[:hosts] %>
 <body>
-<%= erb "navbar.html".to_sym, :locals => {:active_page => :history} %>
-
 <!-- host_index ================================ -->
 <div class="container">
 <div class="content">
@@ -53,5 +49,3 @@ $(document).ready(function() {
 });
     </script>
 </body>
-
-<%= erb "footer.html".to_sym %>

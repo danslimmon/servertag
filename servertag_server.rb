@@ -11,6 +11,7 @@ require 'lib/rest'
 require 'lib/models'
 require 'lib/db_handler'
 require 'lib/changelog'
+require 'lib/navbar'
 
 configure do
     set :show_exceptions, false
@@ -39,6 +40,11 @@ module ServerTag
         
         def template_name
             "#{@base_name}.#{_template_infix}".to_sym
+        end
+
+        # Determines whether sinatra's layout functionality should be used.
+        def layout?
+            content_type == "text/html"
         end
 
         def content_type
@@ -98,7 +104,7 @@ error HTTPError do
 
     status error_model.status
     v = View.new("httperror", request.accept)
-    erb v.template_name, :locals => {:error => error_model}
+    erb v.template_name, :locals => {:error => error_model}, :layout => v.layout?
 end
 
 
@@ -108,7 +114,7 @@ get '/' do
     hosts = handler.all
 
     v = View.new("host_index", request.accept)
-    erb v.template_name, :locals => {:hosts => hosts}
+    erb v.template_name, :locals => {:hosts => hosts}, :layout => v.layout?
 end
 
 
@@ -118,7 +124,7 @@ get '/host/:hostname' do |hostname|
     host = handler.by_name(hostname)
 
     v = View.new("host", request.accept)
-    erb v.template_name, :locals => {:host => host}
+    erb v.template_name, :locals => {:host => host}, :layout => v.layout?
 end
 
 # REST: add tags to host
@@ -215,7 +221,7 @@ get '/host' do
     end
 
     v = View.new("host_list", request.accept)
-    erb v.template_name, :locals => {:hosts => hosts}
+    erb v.template_name, :locals => {:hosts => hosts}, :layout => v.layout?
 end
 
 
@@ -224,7 +230,7 @@ get '/history' do
     # In HTML, this view gets its data from an AJAX call, so we don't
     # need to pass any data to the template.
     v = View.new("history", request.accept)
-    erb v.template_name
+    erb v.template_name, :layout => v.layout?
 end
 
 
@@ -277,7 +283,8 @@ post '/ajax/add_tags' do
     v = View.new("ajax_tags_by_host", ["text/x-json"])
     status 200
     erb v.template_name, :content_type => v.content_type,
-        :locals => {:hosts => hosts, :new_tag_names => tag_names}
+        :locals => {:hosts => hosts, :new_tag_names => tag_names},
+        :layout => v.layout?
 end
 
 post '/ajax/remove_tags' do
@@ -331,7 +338,8 @@ post '/ajax/remove_tags' do
     v = View.new("ajax_tags_by_host", ["text/x-json"])
     status 200
     erb v.template_name, :content_type => v.content_type,
-        :locals => {:hosts => hosts, :new_tag_names => []}
+        :locals => {:hosts => hosts, :new_tag_names => []},
+        :layout => v.layout?
 end
 
 get '/ajax/history_table' do
@@ -342,5 +350,6 @@ get '/ajax/history_table' do
     v = View.new("ajax_history", ["text/x-json"])
     status 200
     erb v.template_name, :content_type => v.content_type,
-        :locals => {:events => search_result.hits}
+        :locals => {:events => search_result.hits},
+        :layout => v.layout?
 end

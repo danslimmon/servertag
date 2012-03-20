@@ -1,10 +1,7 @@
 <!-- navbar ==================================== -->
 <%
 active_page = locals[:active_page]
-pages = [
-    {:key => :host_index, :path => "/", :title => "Index"},
-    {:key => :history, :path => "/history", :title => "History"}
-]
+nb = Navbar.new(active_page)
 %>
 <div class="navbar navbar-fixed-top">
     <div class="navbar-inner">
@@ -12,9 +9,9 @@ pages = [
             <a class="brand" href="#">ServerTag</a>
             <ul class="nav nav-pills">
 <%
-pages.each do |page_info| %>
-                <li<%= (page_info[:key] == active_page) ? ' class="active"' : '' %>>
-                    <a href="<%= page_info[:path] %>"><%= page_info[:title] %></a>
+nb.links.each do |link| %>
+                <li<%= link.active? ? ' class="active"' : '' %>>
+                    <a href="<%= link.path %>"><%= link.title %></a>
                 </li>
 <%
 end
