@@ -124,7 +124,7 @@ delete '/host/:hostname/tags/:tagname' do |hostname,tagname|
     host = handler.by_name(hostname)
 
     changelog = ChangeLog.new
-    removed_tags = host.remove_tags_by_name!(tagname)
+    removed_tags = host.remove_tags_by_name!([tagname])
     changelog.remove_tags!(host, removed_tags)
     if host.tags.empty?
         # If all tags are gone, then remove the host.
