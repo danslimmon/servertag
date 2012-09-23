@@ -38,7 +38,8 @@ module ServerTag
 
         # Returns all Host instances in the DB.
         def all
-            hits = _client.search("name:*").hits
+            hits = _client.search("name:*",
+                                  :size => 999999).hits
             hits.map {|hit|; _convert_hit(hit)}
         end
 
@@ -69,7 +70,8 @@ module ServerTag
                 "tags:#{escape_for_search(tag.name)}"
             end
             search = search_parts.join(" AND ")
-            hits = _client.search(search).hits
+            hits = _client.search(search,
+                                  :size => 999999).hits
             hits.map {|h|; _convert_hit(h)}
         end
 
