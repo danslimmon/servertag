@@ -24,7 +24,7 @@ module ServerTag
     class HostHandler
         # Returns an ES client
         def _client
-            ElasticSearch.new('log2:9200', :index => "servertag", :type => "host")
+            ElasticSearch.new($conf.db_server, :index => "servertag", :type => "host")
         end
 
         # Converts an ElasticSearch hit to a Host instance.
@@ -86,7 +86,7 @@ module ServerTag
     class HistoryEventHandler
         # Returns an ES client
         def _client
-            ElasticSearch.new('log2:9200', :index => "servertag", :type => "history_event")
+            ElasticSearch.new($conf.db_server, :index => "servertag", :type => "history_event")
         end
 
         # Returns the most recent 'n' HistoryEvent instances in the DB.

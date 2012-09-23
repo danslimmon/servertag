@@ -7,6 +7,8 @@ require 'sinatra'
 
 # Add '.' to our lib search path
 $:.unshift(".")
+require 'lib/auth'
+require 'lib/config'
 require 'lib/rest'
 require 'lib/models'
 require 'lib/error'
@@ -19,10 +21,13 @@ configure do
     set :show_exceptions, false
 end
 
-user = ""
+$conf = ServerTag::Config.new
+$conf.parse_config!
+
+user = "anonymous"
 use Rack::Auth::Basic, "ServerTag" do |username, password|
     user = username
-    [username, password] == ['dan', 'crap']
+    $conf.auth_method.auth_valid?(username, password)
 end
 
 helpers do
