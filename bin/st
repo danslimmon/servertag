@@ -65,7 +65,13 @@ class RESTResponse
     # Initializes the instance given a Net:HTTP response object
     def initialize(http_response)
         begin
-            @body = JSON.load(http_response.body)
+            if http_response.code == "204"
+                @body = {}
+            elsif http_response.code =~ /^2/
+                @body = JSON.load(http_response.body)
+            else
+                raise
+            end
         rescue
             raise "Server returned invalid response:\n\n#{http_response.body}"
         end
@@ -139,7 +145,7 @@ class Options
     # Returns the paths to search for config files, by increasing specificity.
     def _config_paths
         [
-            File.join("etc", "servertag", "client"),
+            File.join("", "etc", "servertag", "client"),
             File.join(ENV["HOME"], ".servertag", "client")
         ]
     end
@@ -278,6 +284,16 @@ class DeleteAction
     def assert_valid
         raise "No hostname provided" if (hostname.nil? or hostname.empty?)
     end
+
+    def execute (opts)
+        req = RESTRequest.new(opts, "DELETE", "/host/#{hostname}")
+        resp = req.run
+
+        rslt = ResultFactory.build_result(opts, self, resp)
+        rslt
+    end
+
+    def result_cls; DeleteResult; end
 end
 
 class ResultFactory
@@ -435,6 +451,29 @@ class RemoveTagsResult < ActionResult
         end
     end
 end
+
+
+class DeleteResult < ActionResult
+    def populate_from_response!(response)
+        @output = _format_output(response)
+        @exit_code = 0
+    end
+
+    # Formats a given JSON object however we're supposed to
+    def _format_output(response)
+        if @_opts.json
+            return ""
+        else
+            return _format_as_text(response)
+        end
+    end
+
+    # Formats the given JSON object as just nice-looking text
+    def _format_as_text(response_body)
+        "Removed host '#{@_action.hostname}'"
+    end
+end
+
 
 def barf_usage
     puts <<EOF
