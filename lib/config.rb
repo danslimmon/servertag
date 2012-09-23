@@ -5,7 +5,7 @@ module ServerTag
         # Returns the paths to search for config files, by increasing specificity.
         def _config_paths
             [
-                File.join("etc", "servertag", "server"),
+                File.join("", "etc", "servertag", "server"),
                 File.join(ENV["HOME"], ".servertag", "server")
             ]
         end
