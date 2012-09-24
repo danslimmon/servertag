@@ -67,10 +67,8 @@ class RESTResponse
         begin
             if http_response.code == "204"
                 @body = {}
-            elsif http_response.code =~ /^2/
-                @body = JSON.load(http_response.body)
             else
-                raise
+                @body = JSON.load(http_response.body)
             end
         rescue
             raise "Server returned invalid response:\n\n#{http_response.body}"
@@ -347,10 +345,18 @@ class ErrorResult < ActionResult
     end
 
     def _format_output(response_body)
-        s = "Server produced a %d error:\n\n%s" % [
-            response_body["status"],
-            response_body["message"]
-        ]
+        if @_opts.json
+            return JSON.pretty_generate({
+                "error" => true,
+                "status" => response_body["status"],
+                "message" => response_body["message"]
+            })
+        else
+            return "Server produced a %d error:\n\n%s" % [
+                response_body["status"],
+                response_body["message"]
+            ]
+        end
     end
 end
 
@@ -372,11 +378,7 @@ class ListResult < ActionResult
 
     # Formats the given JSON object as just nice-looking text
     def _format_as_text(response_body)
-        s = "Hosts"
-        s += " with tag(s) #{@_action.tags.join(", ")}" unless @_action.tags.empty?
-        s += ":\n    "
-        s += response_body["result"].map {|host|; host["hostname"]}.sort.join("\n    ")
-
+        s = response_body["result"].map {|host|; host["hostname"]}.sort.join("\n")
         s
     end
 end
@@ -399,10 +401,7 @@ class ShowResult < ActionResult
 
     # Formats the given JSON object as just nice-looking text
     def _format_as_text(response_body)
-        s = <<EOF
-Tags for host '#{@_action.hostname}':
-    #{response_body["tags"].sort.join("\n    ")}
-EOF
+        s = response_body["tags"].sort.join("\n")
         return s
     end
 end
@@ -571,5 +570,5 @@ rescue
 end
 
 result = opts.action.execute(opts.dup)
-puts result.output
+puts result.output unless result.output.empty?
 exit result.exit_code
