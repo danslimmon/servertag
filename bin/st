@@ -375,7 +375,7 @@ class ListResult < ActionResult
         s = "Hosts"
         s += " with tag(s) #{@_action.tags.join(", ")}" unless @_action.tags.empty?
         s += ":\n    "
-        s += response_body["result"].map {|host|; host["hostname"]}.join("\n    ")
+        s += response_body["result"].map {|host|; host["hostname"]}.sort.join("\n    ")
 
         s
     end
