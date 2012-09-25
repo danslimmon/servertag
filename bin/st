@@ -108,7 +108,7 @@ class HTTPCredentials
     def parse_file!(path)
         f = open(path)
         lines = f.readlines()
-        unless lines.count == 2
+        unless lines.length == 2
             raise "Credentials file must be 2 lines: username on one, password on the other"
         end
 
