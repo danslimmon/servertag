@@ -2,6 +2,11 @@ require 'rubberband'
 
 require 'lib/search_result'
 
+# I had to run the following curl shit to make elasticsearch not return partial
+# results for tags:
+#
+# curl -XDELETE http://server:9200/servertag/host/_mapping
+# curl -XPUT http://server:9200/servertag/host/_mapping?ignore_conflicts -d '{"host":{"properties":{"name":{"type":"string","index":"not_analyzed"},"tags":{"type":"string","index":"not_analyzed"}}}}'
 module ServerTag
     def escape_for_search(s)
         s.gsub(":", "\\:")
