@@ -11,6 +11,7 @@ class RESTRequest
         @_method = method.upcase
         @_url = _clean_url(opts.server_url, path, qs)
         @_creds = opts.creds
+        @_user_agent = opts.user_agent
         @_body = body
     end
 
@@ -37,6 +38,8 @@ class RESTRequest
         }[@_method].new(URI(@_url).request_uri)
 
         r["Accept"] = "text/x-json"
+        r["User-Agent"] = @_user_agent
+
         r.basic_auth(@_creds.username, @_creds.password) if @_creds.present?
         unless @_body.nil?
             r["Content-Type"] = "text/x-json"
@@ -124,16 +127,14 @@ class NoHTTPCredentials
 end
 
 class Options
-    attr_accessor :json, :server_url, :creds, :action
+    attr_accessor :json, :server_url, :creds_file, :user_agent, :creds, :action
 
     def initialize
         @json = false
         @server_url = nil
         @action = nil
-    end
-
-    def _creds_path
-        File.join(ENV["HOME"], ".servertag", "creds")
+        @creds_file = File.join(ENV["HOME"], ".servertag", "creds")
+        @user_agent = "st"
     end
 
     def _wrong_mode_message(path)
@@ -161,7 +162,7 @@ class Options
     # an exception if the creds file is present but doesn't have acceptable
     # permissions.
     def parse_creds!
-        path = _creds_path()
+        path = @creds_file
         unless File.exist?(path)
             @creds = NoHTTPCredentials.new 
         end
@@ -490,9 +491,11 @@ CONFIGURATION:
     you.
 
 USAGE:
-    st [--json] [--server URL] COMMANDS
+    st [--json] [--server URL] [--creds CREDSFILE] [--user-agent USERAGENT] COMMANDS
         --json: Output JSON instead of regular text
         --server: Specifies the server URL to use (overrides any config files)
+        --creds: Allows you to user a credentials file other than ~/.servertag/creds
+        --user-agent: Specifies the user-agent header that st will send to the server
 
     st help
         Prints this usage message.
@@ -525,6 +528,16 @@ begin
         ind = args.index("--server")
         args.delete_at(ind)
         opts.server_url = args.delete_at(ind)
+    end
+    if args.include?("--creds")
+        ind = args.index("--creds")
+        args.delete_at(ind)
+        opts.creds_file = args.delete_at(ind)
+    end
+    if args.include?("--user-agent")
+        ind = args.index("--user-agent")
+        args.delete_at(ind)
+        opts.user_agent = args.delete_at(ind)
     end
 
     if args[0] == "list"
