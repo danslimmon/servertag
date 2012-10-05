@@ -73,29 +73,43 @@ post '/host/:hostname/tags' do |hostname|
     input.required!(RESTTags.new)
     input.populate!(request.body)
 
-    changelog = ChangeLog.new
-
     handler = DBHandlerFactory.handler_for(Host)
-    host = handler.by_name(hostname, :on_missing => :new)
-    # If the host has no tags yet, we just created it, so we need to log that.
-    changelog.create_host!(host) if host.tags.empty?
+    retries = 0
 
-    new_tags = input.tags
-    added_tags = host.add_tags!(new_tags)
-    host.save
-    # Log the added tags
-    changelog.add_tags!(host, added_tags)
+    while retries <= $conf.db_conflict_retries do
+        changelog = ChangeLog.new
 
-    he = HistoryEvent.new
-    he.populate_from_change!(DateTime.now,
-                             user,
-                             "rest",
-                             request.ip,
-                             changelog)
-    he.save
+        host = handler.by_name(hostname, :on_missing => :new)
+        # If the host has no tags yet, we just created it, so we need to log that.
+        changelog.create_host!(host) if host.tags.empty?
 
-    status 204
-    body ""
+        new_tags = input.tags
+        added_tags = host.add_tags!(new_tags)
+        begin
+            host.save
+
+            # Log the added tags
+            changelog.add_tags!(host, added_tags)
+
+            he = HistoryEvent.new
+            he.populate_from_change!(DateTime.now,
+                                     user,
+                                     "rest",
+                                     request.ip,
+                                     changelog)
+            he.save
+
+            status 204
+            body ""
+            return
+        rescue ElasticSearch::RequestError => e
+            # We want to try again if there was a conflict. That's what status 409 means.
+            raise unless e.message =~ /"status":409/
+            retries += 1
+        end
+    end
+
+    raise "Conflict retry limit of #{$conf.db_conflict_retries} exceeded. Host is changing too fast to update it."
 end
 
 

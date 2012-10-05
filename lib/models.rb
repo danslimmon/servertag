@@ -4,6 +4,7 @@ module ServerTag
     # Abstract for models.
     class Model
         attr_accessor :es_id
+        attr_accessor :es_version
     end
 
     class Host < Model

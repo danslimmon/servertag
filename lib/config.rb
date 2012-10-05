@@ -1,6 +1,6 @@
 module ServerTag
     class Config
-        attr_accessor :db_server, :auth_method
+        attr_accessor :db_server, :db_conflict_retries, :auth_method
 
         # Returns the paths to search for config files, by increasing specificity.
         def _config_paths
@@ -28,6 +28,11 @@ module ServerTag
 
             if config.key?("db_server")
                 @db_server = config["db_server"]
+            end
+            if config.key?("db_conflict_retries")
+                @db_conflict_retries = config["db_conflict_retries"]
+            else
+                @db_conflict_retries = 3
             end
 
             if config.key?("auth")

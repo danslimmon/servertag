@@ -41,6 +41,20 @@ module ServerTag
             h
         end
 
+        # Retrieves an ElasticSearch hit from the index.
+        #
+        # Necessary if you're going to write the document back to the database,
+        # because you won't know its version number just from searching.
+        def _retrieve_hit(es_hit)
+            document = _client.get(es_hit._id, :preference => "_primary")
+
+            h = Host.new
+            h.name, h.es_id, h.es_version = document.name, document._id, document._version
+            h.set_tags_by_name!(document.tags)
+
+            h
+        end
+
         # Returns all Host instances in the DB.
         def all
             hits = _client.search("name:*",
@@ -52,6 +66,8 @@ module ServerTag
         def by_name(hostname, opts={})
             Host.assert_valid_hostname(hostname)
 
+            # :preference => primary tells ES to pull the document from its primary shard. This
+            # reduces the likelihood of a collision when we try to upload the new version.
             hits = _client.search("name:#{escape_for_search(hostname)}").hits
             if hits.empty?
                 if opts[:on_missing] == :new
@@ -63,7 +79,7 @@ module ServerTag
                 end
             end
             
-            _convert_hit(hits[0])
+            _retrieve_hit(hits[0])
         end
 
         # Returns all hosts that have the given tags.
@@ -85,7 +101,14 @@ module ServerTag
         end
 
         def index(host)
-            _client.index(host.to_db_hash, :id => host.es_id)
+            if host.es_version.nil?
+                # This means the host is new, so we don't have an ES version for it yet.
+                _client.index(host.to_db_hash, :id => host.es_id)
+            else
+                # This means we read the host from ES, so we want to specify what version we read
+                # to avoid overwriting/collisions
+                _client.index(host.to_db_hash, :id => host.es_id, :version => host.es_version)
+            end
         end
     end
 
